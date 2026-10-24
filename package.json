@@ -1,0 +1,27 @@
+{
+  "name": "luaguard-unpack",
+  "version": "0.1.0",
+  "description": "Extract the structure, string table and bytecode of Lua scripts protected by Lua-Guard (lua-guard.xyz)",
+  "type": "module",
+  "bin": {
+    "luaguard-unpack": "./luaguard-unpack.mjs"
+  },
+  "files": [
+    "luaguard-unpack.mjs",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "lua",
+    "luau",
+    "roblox",
+    "lua-guard",
+    "unpacker",
+    "bytecode",
+    "reverse-engineering",
+    "deobfuscator"
+  ],
+  "license": "MIT"
+}
