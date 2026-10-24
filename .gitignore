@@ -1,0 +1,9 @@
+node_modules/
+unpacked/
+out*/
+*.log
+
+# Do not commit protected samples or anything derived from them.
+*.b64
+blob.bin
+fixtures/
