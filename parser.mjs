@@ -64,7 +64,8 @@ export function parseBlob(blob, cfg) {
         if (step.key === "op") {
             for (let i = 0; i < instrCount; i++) {
                 const v = R3(blob, p); p += 3;
-                arr.push(((((v) - IA) - shift) * cfg.opMul) % 256);
+                // Lua 的 % 对负数返回非负，JS 不——必须归一化，否则所有负操作数指令都错
+                arr.push((((((v) - IA) - shift) * cfg.opMul) % 256 + 256) % 256);
             }
         } else {
             let d = step.phase;
