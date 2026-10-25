@@ -23,6 +23,7 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 import { parseBlob } from "./parser.mjs";
+import { pseudocode } from "./pseudo.mjs";
 
 const D7 = 0x800000; // signed 24-bit bias used all over the loader
 const KEY_LEN = 32;  // loader's LCG key length
@@ -436,6 +437,29 @@ if (modern) {
             dumpArr(p.code.op, p.label, p);
         }
         fs.writeFileSync(path.join(args.out, "disasm.txt"), L.join("\n"));
+
+        // ── 线性伪代码：每行一条语句，跳转用标签 ──
+        const constOf = (idx) => {
+            const ref = modern.r.constRefs?.[idx - 1];
+            if (ref === undefined) return "K[" + idx + "]";
+            const sv = strById.get(String(ref));
+            if (sv !== undefined) return "K[" + JSON.stringify(sv.length > 40 ? sv.slice(0, 40) + "…" : sv) + "]";
+            const gv = globalById.get(String(ref));
+            if (gv !== undefined) return gv;
+            return "K[" + idx + "]";
+        };
+        const P = [];
+        P.push("; linear pseudocode — one statement per instruction, jumps as labels");
+        P.push("; registers are rN (no names recovered); this is NOT a decompiler");
+        P.push("");
+        P.push(";; ===== main =====");
+        P.push(pseudocode(modern.r, modern.name, constOf));
+        for (const p of allProtos) {
+            P.push("");
+            P.push(`;; ===== ${p.label} (depth ${p.depth}) =====`);
+            P.push(pseudocode(p, modern.name, constOf));
+        }
+        fs.writeFileSync(path.join(args.out, "pseudocode.txt"), P.join("\n"));
     }
 
     fs.writeFileSync(path.join(args.out, "structure.json"), JSON.stringify({
