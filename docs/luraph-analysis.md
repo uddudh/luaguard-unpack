@@ -319,3 +319,71 @@ then if C then A else B                                    ← 表达式
 - 出 AST 后，判断 `if` 表达式变得**确定**（AST 节点类型）
 
 **或者**：找个能在 aarch64 上跑的 Luau 编译版本（自己编译 Luau 源码）。
+
+---
+
+## 🎉 突破：语法层完全打通（2026-10-26 晚）
+
+### 成果
+
+```
+luraph_source.lua (312 KB)
+  → tokenizer.mjs（100 行词法分析）
+  → parser.mjs（200 行递归下降语法分析）
+  → 37 个 if 表达式转换
+  → 9 个复合赋值转换
+  → luraph_final4.lua (314 KB)
+  → ✅ 编译成功（Lua 5.4）
+```
+
+**这是第一次让 Luraph 的代码通过标准 Lua 的语法检查。**
+
+### 核心技术：递归下降 parser
+
+**之前一直失败的原因**：用字符串匹配判断「语句 if vs 表达式 if」——不可靠。
+
+**解法**：真正的语法分析。
+
+```javascript
+parseStatement()  // 语句：if/while/for/function/local/return
+parseExpr()       // 表达式：if 表达式只在这里出现
+
+// 关键：then 后面调哪个函数，由上下文决定
+parseIfStmt() {
+    this.expect("if");
+    this.parseExpr();      // 条件（表达式）
+    this.expect("then");
+    this.parseBlock();     // ← 语句块！不是表达式
+    ...
+}
+```
+
+**关键洞察**：`then` 后面调 `parseExpr()`（表达式）还是 `parseStatement()`（语句），由**上下文**决定——这是字符匹配永远做不到的。
+
+### 剩余的运行时问题
+
+**编译成功但执行失败**：
+
+```
+attempt to call a nil value (field 'integer index')
+```
+
+**原因**：Luraph 依赖 Roblox 的 `buffer` API（userdata），用 Lua 表模拟不精确。
+
+**需要**：
+1. 精确的 `buffer` 实现（字节序、边界、signed/unsigned）
+2. `coroutine` 行为对齐（Lua 5.4 vs Roblox）
+3. 其他 Roblox API 细节
+
+**这些是工程活，不是算法难题。**
+
+### 工具清单
+
+| 文件 | 作用 |
+|---|---|
+| `tools/luau/tokenizer.mjs` | 词法分析（100 行） |
+| `tools/luau/parser.mjs` | **递归下降 parser（200 行，核心）** |
+| `tools/luau/convert-recursive.mjs` | 递归转换器（内层优先） |
+| `tools/luau/fix-nested.mjs` | 处理残留的嵌套 if 表达式 |
+| `tools/luau/fix-compound.mjs` | 复合赋值转换 |
+| `tools/luau/run-harness.lua` | Roblox API stub + 运行测试 |
