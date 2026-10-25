@@ -152,6 +152,12 @@ L0012:
   if not (r26) then goto L0034 end
 ```
 
+**What is intentionally NOT done:** loop reconstruction. The VM's jump-target field is only
+8 bits wide (observed range 0..255) while a single function can hold 800+ instructions, so the
+target is clearly not a plain absolute program counter — the page/bank must live somewhere we
+have not located yet. With an incomplete jump graph, any loop inference would be guesswork, so
+it is left out rather than guessed.
+
 Register provenance is annotated inline (`; r8 = r10[K["getgenv"]]`), loop head candidates are
 marked, and jump targets are resolved through jump-chains so every `goto` has a matching label.
 
