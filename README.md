@@ -22,6 +22,7 @@ node luaguard-unpack.mjs --url https://example.com/protected.lua -o unpacked
 | `strings.json` / `strings.txt` | the encrypted string table, **fully decrypted** |
 | `globals.json` | numeric constants from the global table |
 | `disasm.txt` | **every** function prototype (main + all nested children), disassembled with named opcodes, operands, and constant values inlined as comments |
+| `pseudocode.txt` | **linear pseudocode** for v2/v3: one Lua-like statement per instruction, jumps as labels |
 | `structure.json` | everything above, machine-readable, plus a verification verdict |
 
 ## Why you can trust the output
@@ -141,6 +142,21 @@ are shown, so the instruction stream is readable without a decompiler:
   0009  GETTABLE       a=  32 b=  31 c=  33
   0018  LOADK          a=   0 b=   5 c=  18   ; "RbxAnalyticsService"
 ```
+
+For v2/v3 there is also `pseudocode.txt`, which renders the same instructions as statements:
+
+```lua
+L0003:
+  r40 = K["Invalid key"]
+L0005:
+  r37 = true
+L0006:
+  goto L190
+```
+
+Registers stay unnamed (`rN`) and control flow is not rebuilt, so this is a readability aid, not a
+decompiler. Instructions whose operand layout has not been verified are left as raw `-- op N`
+comments rather than guessed.
 
 Nested prototypes are walked recursively (`chunk#0.#2.#1 (depth 3) …`), each with its own
 checksum status, so no code is left unexamined.
