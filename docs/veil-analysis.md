@@ -182,3 +182,75 @@ _6m = _9x + _5d + _9n + _8n + _8h
 1. 确认 `_8h` 的完整内容
 2. 严格按源码的字节顺序重写第 2 层
 3. 验证：可打印率应该 > 90%（真正的字节码是 Lua 数据）
+
+---
+
+## 第三层：LZSS 解压（2026-10-25 深夜，已成功）
+
+### 算法（还原自 `_9v`）
+
+```lua
+local function _9v(XzoX)
+  if _6v(XzoX) ~= 298963444 then return nil end    -- 校验和
+  local _0p = 2512257                               -- 解压后长度
+  local zYo = _6x                                   -- 状态
+  local ip = 0      -- 输入位置
+  local op = 0      -- 输出位置
+  local oaE = 0     -- 位偏移
+  while op < _0p do
+    if oaE >= 8 then curByte = readu8(); oaE = 0 end
+    -- 统计前导零
+    Kbzsn = 0
+    while oaE + Kbzsn < 8 and (curByte >> (7 - (oaE+Kbzsn))) & 1 == 0 do
+      Kbzsn = Kbzsn + 1
+    end
+    if Kbzsn > 0 then
+      -- 复制 Kbzsn 个原始字节
+      Kbzsn = min(Kbzsn, 剩余输入, 剩余目标)
+      append(input[ip..ip+Kbzsn-1])
+      ip = ip + Kbzsn
+      oaE = oaE + Kbzsn
+    end
+    if oaE < 8 and op < _0p then
+      -- 回引（读 2 字节，小端 readu16）
+      ref = readu16()
+      dist = (ref >> 4) - 1        -- 注意：是 -1，不是 -5
+      len  = (ref & 15) + 3
+      if dist < 1 then dist = 1 end
+      if dist > op then dist = op end       -- clamp
+      if len > _0p - op then len = _0p - op end
+      -- 从 output[op-dist] 复制 len 字节
+      for i = 0, len-1 do out[op+i] = out[op-dist+i] end
+      op = op + len
+      oaE = oaE + 1                -- 只前进 1 位
+    end
+  end
+end
+```
+
+### 完整三层结果
+
+```
+1.8 MB 编码数据
+  → 第 1 层 Base-N 解码 → 1,428,879 字节
+  → 第 2 层 链式 XOR     → 1,428,876 字节
+  → 第 3 层 LZSS 解压    → 2,512,257 字节  ← 完整 Lua 源码
+```
+
+**可打印率 86.7%**（剩余 13.3% 是回引细节还有一处不准）
+
+### 关键 bug 列表（修完后才通）
+
+1. `_6k` 拼接顺序（`_7s` 在 `_4c` 之前）—— 41% → 51%
+2. **Lua 的 `%` 对负数返回非负，JS 保留负号** —— 第 1 层全错
+3. `//` 的优先级（与 `*` `/` 同级左结合）
+4. 取模惯用法 `X - (X//Y)*Y`（不是 `X - (X/Y)*Y`）
+5. **距离减数是 `129-(134-6) = 1`，不是 5** —— 回引全错
+6. 位偏移 `oaE` 要手动管理（回引只 +1 位）
+7. `dist` 要 clamp 到已输出长度
+
+### 工具脚本
+
+- `tools/veil/eval-lua.mjs` — 正确的 Lua 算术求值器（含 `//` 优先级、取模、`^` 幂）
+- `tools/veil/decode-layers12.mjs` — 第 1、2 层解码
+- `tools/veil/lzss-decompress.mjs` — 第 3 层 LZSS
