@@ -152,6 +152,9 @@ L0012:
   if not (r26) then goto L0034 end
 ```
 
+Register provenance is annotated inline (`; r8 = r10[K["getgenv"]]`), loop head candidates are
+marked, and jump targets are resolved through jump-chains so every `goto` has a matching label.
+
 `pseudocode.txt` keeps it flat, one statement per instruction:
 
 ```lua
