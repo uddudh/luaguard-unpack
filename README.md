@@ -6,8 +6,11 @@ executor scripts.
 
 No executor is required. No `crypt` library. No game client. Just Node.
 
-```
+```bash
 node luaguard-unpack.mjs protected.lua -o unpacked
+
+# or straight from a link -- no manual download:
+node luaguard-unpack.mjs --url https://example.com/protected.lua -o unpacked
 ```
 
 ## What you get
@@ -42,9 +45,67 @@ usable in scripts.
 
 ```
 -o, --out <dir>   output directory (default: ./unpacked)
+-u, --url <url>   download the protected script from a URL
 --verify          validate the payload only; write nothing
 --no-disasm       skip disassembly (large payloads)
 --quiet           only errors and the final verdict
+```
+
+## Two layers, both handled
+
+A Lua-Guard "protected" file is encrypted twice, and this tool unwraps **both** without
+ever running Roblox or an executor:
+
+1. **Outer layer** — a table of a few tens of thousands of short base64 chunks plus a
+   self-contained decryptor written in plain Lua (hand-rolled SHA256, base64 and a
+   byte-wise XOR). It ships **decoy chunks** and scrambles the real ones behind a
+   permutation array:
+
+   ```
+   key       = sha256(salt ":" scriptId ":runtime")
+   plaintext = XOR( base64decode( concat( chunk[order[i]] ) ), key )
+   ```
+
+   Only `order.length` chunks are used (e.g. 32097 of 32112 — the remaining 15 are junk),
+   and junk characters are sprinkled through the base64 text, stripped by a `gsub` filter.
+   Get the permutation or the decoy count wrong and you get noise, not an error message.
+
+2. **Inner layer** — the payload described in the next section (base64 segments plus the
+   custom VM bytecode).
+
+Both layers are checked against the original program's own integrity values, so a clean
+run means byte-exact output rather than a plausible-looking approximation.
+
+## Version profiles (auto-detected)
+
+Lua-Guard rotates its entire parameter set between builds, so nothing here is hardcoded
+to one version. The tool tries each known profile and accepts the first whose per-prototype
+checksum passes **and** which consumes the blob to the last byte.
+
+| Parameter | v1 | v2 | v3 |
+|---|---|---|---|
+| LCG seed | 348 | 617 | 52 |
+| LCG mixer | `i*17+173` | `i*25+70` | `i*31+231` |
+| 3-byte order | `b1 b0 b2` | `b2 b0 b1` | `b1 b0 b2` |
+| 4-byte order | `b3 b1 b2 b0` | `b2 b3 b0 b1` | `b2 b0 b3 b1` |
+| Opcode multiplier | 143 | 151 | 97 |
+| Checksum constant | 4442017 | 736242 | 2608344 |
+| Instruction arrays | op,c,a,b | b,a,c,op | b,op,c,a |
+| String-table fields | id,t,iv,tag | cipher,iv,id,tag | iv,id,tag,cipher |
+
+Stable across all three: the outer decryption, the AES-256-CBC string decryption, and the
+`3.<base64>.<hex>` tag format.
+
+Verified end to end on a live URL:
+
+```
+$ node luaguard-unpack.mjs --url https://lua-guard.xyz/api/raw/1899... -o out
+[0/5] downloading ...
+[1/5] segments: 4 -> 79759 bytes
+[2/5] salt verified: xLNORP0hF+Ie...
+[3/5] layout: v3 (checksum 3107495 OK, 79759/79759 bytes)
+[4/5] strings: 178/178 decrypted
+done - fully verified (v3)
 ```
 
 ## How the format works
