@@ -15,7 +15,8 @@ const V2 = {
     GETTABLE: (a, b, c) => `r${b} = r${a}[r${c}]`,
     SETTABLE: (a, b, c) => `r${c}[r${b}] = r${a}`,
     GETGLOBAL: (a, b, c, K) => `r${b} = _ENV[${K(c)}]`,
-    JMP: (a) => `goto L${a}`,
+    // VM 的 pc 是 1-based，数组索引是 0-based，所以目标要减 1
+    JMP: (a) => `goto L${String(a - 1).padStart(4, "0")}`,
     TEST: (a, b, c) => `if not r${c} then`,
     ADDI: (a, b, c) => `r${c} = r${c} + ${b}`,
     SUBI: (a, b, c) => `r${b} = r${c} - ${a}`,
@@ -52,7 +53,8 @@ const V3 = {
     GETTABLE: (a, b, c) => `r${c} = r${b}[r${a}]`,
     SETTABLE: (a, b, c) => `r${c}[r${b}] = r${a}`,
     GETGLOBAL: (a, b, c, K) => `r${b} = _ENV[${K(c)}]`,
-    JMP: (a, b, c) => `goto L${c}`,
+    // 同上：pc 1-based → 索引 0-based
+    JMP: (a, b, c) => `goto L${String(c - 1).padStart(4, "0")}`,
     TEST: (a, b, c) => `if not r${a} then`,
     ADDI: (a, b, c) => `r${a} = r${a} + ${c}`,
     SUBI: (a, b, c) => `r${c} = r${b} - r${a}`,
