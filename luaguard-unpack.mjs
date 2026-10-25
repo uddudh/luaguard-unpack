@@ -367,7 +367,9 @@ if (modern) {
     log(`[4/5] strings: ${modern.strings.length - modern.failed}/${modern.strings.length} decrypted`);
 
     if (args.verify) {
-        const ok = modern.failed === 0;
+        // HMAC 才是数据完整性的唯一保证（各原型的 checksum 只看字段「数量」，不看内容），
+        // 所以篡改过的文件即使能解析出来，也必须判定为「未验证」。
+        const ok = modern.failed === 0 && hmacOk;
         console.log("");
         console.log(ok ? "\x1b[32mverify: fully verified\x1b[0m (checksum + exact byte consumption + all strings)"
                       : `\x1b[33mverify: incomplete\x1b[0m strings=${modern.strings.length - modern.failed}/${modern.strings.length}`);
@@ -499,13 +501,23 @@ if (modern) {
     }, null, 1));
 
     console.log("");
-    console.log(modern.failed === 0
-        ? `\x1b[32mdone — fully verified (${modern.name})\x1b[0m → ${args.out}/`
-        : `\x1b[33mdone with warnings (${modern.name})\x1b[0m → ${args.out}/`);
-    process.exit(modern.failed === 0 ? 0 : 3);
+    if (modern.failed !== 0) {
+        console.log(`\x1b[33mdone with warnings (${modern.name})\x1b[0m — ${modern.failed} strings failed → ${args.out}/`);
+    } else if (!hmacOk) {
+        console.log(`\x1b[31mUNVERIFIED (${modern.name})\x1b[0m — payload HMAC did not match; the file is truncated or tampered with → ${args.out}/`);
+    } else {
+        console.log(`\x1b[32mdone — fully verified (${modern.name})\x1b[0m → ${args.out}/`);
+    }
+    process.exit(modern.failed === 0 && hmacOk ? 0 : 3);
 }
 
-// ── Step 3: re-implement the loader's field encoding ───────────────────────────
+// ── Step 3: legacy v1-only parser (fallback) ───────────────────────────────────
+// Everything below this line is the original hand-written v1 parser. It is now DEAD CODE
+// for all three known layouts — the profile-driven parser above handles v1/v2/v3 and
+// returns before reaching here. It is kept only as a safety net for a v1 payload whose
+// header the profile parser somehow rejects, and can be deleted once that has never
+// happened across a large sample.
+// ────────────────────────────────────────────────────────────────────────────────
 function bxor8(a, b) {
     // Operand values are signed 24-bit and the VM feeds them straight into a naive
     // bit-by-bit XOR whose modulo is always non-negative (Lua semantics). JavaScript's
