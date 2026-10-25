@@ -26,6 +26,8 @@ import { parseBlob } from "./parser.mjs";
 import { pseudocode, TABLES } from "./pseudo.mjs";
 import { structured } from "./structure.mjs";
 import { makeDescriber } from "./regnames.mjs";
+import { foldExpressions, cleanup } from "./fold.mjs";
+import { detect } from "./detect.mjs";
 
 const D7 = 0x800000; // signed 24-bit bias used all over the loader
 const KEY_LEN = 32;  // loader's LCG key length
@@ -477,11 +479,11 @@ if (modern) {
         S.push("; labels mark jump targets; still no variable names or loop reconstruction");
         S.push("");
         S.push(";; ===== main =====");
-        S.push(structured(modern.r, modern.name, constOf, names, TABLES[modern.name], makeDescriber(modern.r, modern.name, constOf, names)));
+        S.push(cleanup(foldExpressions(structured(modern.r, modern.name, constOf, names, TABLES[modern.name], makeDescriber(modern.r, modern.name, constOf, names)).split("\n"))).join("\n"));
         for (const p2 of allProtos) {
             S.push("");
             S.push(`;; ===== ${p2.label} (depth ${p2.depth}) =====`);
-            S.push(structured(p2, modern.name, constOfFor(p2), names, TABLES[modern.name], makeDescriber(p2, modern.name, constOfFor(p2), names)));
+            S.push(cleanup(foldExpressions(structured(p2, modern.name, constOfFor(p2), names, TABLES[modern.name], makeDescriber(p2, modern.name, constOfFor(p2), names)).split("\n"))).join("\n"));
         }
         fs.writeFileSync(path.join(args.out, "structured.txt"), S.join("\n"));
     }
