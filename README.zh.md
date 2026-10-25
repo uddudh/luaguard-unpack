@@ -19,6 +19,7 @@ node luaguard-unpack.mjs --url https://example.com/protected.lua -o unpacked
 | `strings.json` / `strings.txt` | 加密字符串表，**全部解密** |
 | `globals.json` | 全局数值常量 |
 | `disasm.txt` | **全部**函数原型（主函数 + 所有嵌套子函数）的反汇编，带 opcode 名、操作数、常量值注释 |
+| `pseudocode.txt` | **线性伪代码**（v2/v3）：每条指令一行 Lua 风格语句，跳转用标签 |
 | `structure.json` | 机器可读的完整结构 + 校验结论 |
 
 ## 为什么结果可信
@@ -97,6 +98,20 @@ Lua-Guard 每出一个新版本就把整套参数换掉，所以这里没有任�
   0008  LOADK          a=  33 b=   0 c=  16   ; "getgenv"
   0018  LOADK          a=   0 b=   5 c=  18   ; "RbxAnalyticsService"
 ```
+
+v2/v3 还会额外输出 `pseudocode.txt`，把指令渲染成语句：
+
+```lua
+L0003:
+  r40 = K["Invalid key"]
+L0005:
+  r37 = true
+L0006:
+  goto L190
+```
+
+寄存器保持 `rN` 不命名、控制流不做重建，所以这只是**提高可读性**，不是反编译器。
+操作数位置还没核对过的指令，会原样保留成 `-- op N` 注释，**不猜**。
 
 嵌套的原型会递归展开（`chunk#0.#2.#1 (depth 3) …`），每个都带自己的校验状态，不留死角。
 
