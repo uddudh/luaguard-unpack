@@ -108,7 +108,7 @@ const V1 = {
     212: (a) => `R[${a}..] = rets`,                               // VTOB
 };
 
-const TABLES = { v1: V1, v2: V2, v3: V3 };
+export const TABLES = { v1: V1, v2: V2, v3: V3 };
 
 /**
  * @param {object} proto  parseBlob 的结果
