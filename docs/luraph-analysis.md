@@ -191,3 +191,67 @@ y = {64864, 1900354245, 712316133, 2327542495, 4116613560,
 所以「提取字节码 → 反汇编」这条传统路线**对这两者都不适用**。
 
 真正的路线是：**理解 VM 本身在做什么**（把状态机翻译回正常代码）。
+
+---
+
+## 深层分析（2026-10-26 续）
+
+### VM 结构：46 个方法
+
+`BW` 是解压函数（163 状态机），它调用 **46 个方法**：
+
+```
+c Y z p W J x G H Z K D M U L Q r b s l k B N f j q F a h A C m t u T O o R v V i g I E d yW
+```
+
+每个方法 118-538 字符，总约 15,000 字符。
+
+**提取结果**：`tools/luraph/vm-methods.json`（含源码）+ `vm-methods-pretty.txt`（伪代码）
+
+### 56 个 API 映射
+
+```
+[126] = buffer.readu8     [11]  = buffer.readu32
+[92]  = buffer.readu16    [107] = buffer.readi32
+[30]  = buffer.writeu32   [77]  = buffer.writestring
+[48]  = bit32.bxor        [85]  = bit32.bor
+[27]  = bit32.band        [71]  = bit32.bnot
+[49]  = string.char       [103] = string.byte
+[65]  = buffer.create     [96]  = setmetatable
+```
+
+### 初始状态
+
+```lua
+c = function(j) return true, 163, nil×21; end
+```
+
+**VM 从状态 163 开始。**
+
+### 核心阻塞：Luau 语法
+
+Luraph 用了 **Luau 的 `if` 表达式**：
+
+```lua
+P = if f[G[P]] ~= z[P] then r[P] else P
+```
+
+标准 Lua 5.4 不支持，必须转换成：
+
+```lua
+P = (function() if f[G[P]] ~= z[P] then return r[P] else return P end end)()
+```
+
+**转换器**：`tools/luraph/luau-if-expr-converter.mjs`
+
+**已处理**：
+- 37 个 if 表达式
+- 嵌套的 if 表达式
+- 9 个复合赋值（`y += w` → `y = y + w`）
+- 区分表达式 if（无 end）和语句 if（有 end）
+
+**仍卡在**：分支边界的自动判断（简单表达式遇 `;` 停，复杂语句不能停）——需要真正的语法分析器。
+
+### 样本
+
+`tools/luraph/luraph_sample.lua`（Moondiety 加载器，312KB，Luraph v15.1）

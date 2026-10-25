@@ -1,0 +1,731 @@
+; Luraph v15.1 — VM 方法翻译
+; 46 个方法
+
+;; ======== 方法 c（118 字符）========
+  function(j)
+  return true,163,nil,nil,nil,nil,nil,nil,nil,nil,nil,nil,nil,nil,nil,nil,nil,nil,nil,nil,nil,nil,nil,nil;
+  end
+
+;; ======== 方法 Y（177 字符）========
+  function(j,K,Z,M,d,P)
+  if P<=0 then local P=readu8(d,1+Z);
+  return P<128 and 171 or 56,d,P,M;
+  else local P=readu8(d,2+Z);
+  if 128>P then
+  return 58,P,K,M;
+  else
+  return 8,d,K,P;
+  end;
+  end;
+  end
+
+;; ======== 方法 z（337 字符）========
+  function(j,K,Z,M,d,P,z,r,f,x)
+  if r<=2 then local S,b,I=x[1],x[4],x[3];
+  local G,Y=S+b,b<=0;S,b=G>=I,G<=I;I=Y and S or not Y and b;x[1]=G;
+  if I then
+  return 150,K,G,z,Z;
+  else
+  return 116,K,M,z,Z;
+  end;
+  elseif r<=3 then local r=128*(z-128)+(16384*(P-128)+f);
+  return 137,K+3,M,r,Z;
+  else local Z=readu8(d,K+1);
+  return Z>=128 and 124 or 92,K,M,z,Z;
+  end;
+  end
+
+;; ======== 方法 p（187 字符）========
+  function(j,K,Z,M,d,P,z,r)
+  if M<=5 then local M=P-79866;
+  local f,x,S=table_get(M),table_get(M),1+0;
+  return 2,{1-S,nil,M+0,S,K},f,x,r;
+  else local M=readu8(Z,z);
+  return 128>M and 68 or 10,K,P,d,M;
+  end;
+  end
+
+;; ======== 方法 W（162 字符）========
+  function(j,K,Z,M,d,P)local z=readu8(P,3+d);
+  local j,r,f,x,S=16384*(K-128),M-128,(Z-128)*128,2097152*(z%128),z%128;P=(z-S)*2097152;z=r+(f+j)+P+x;
+  return 54,d+4,z;
+  end
+
+;; ======== 方法 J（325 字符）========
+  function(j,K,Z,M,d,P,z,r,f,x,S)
+  if r<=8 then local r,b,I,G=readu8(d,3+M),16384*(P-128),f-128,(K-128)*128;
+  return 37,I+(2097152*(r%128)+(r-r%128)*2097152+b+G),M+4,S,z;
+  else local K=readu8(d,S+3);
+  local j,P,r,f,b=(z-128)*16384,x-128,(Z-128)*128,2097152*(K%128),K%128;
+  local Z=(K-b)*2097152;K=P+f+(j+r+Z);
+  return 139,d,M,S+4,K;
+  end;
+  end
+
+;; ======== 方法 x（408 字符）========
+  function(j,K,Z,M,d,P,z,r,f)
+  if Z<=11 then
+  if Z<=10 then local x=readu8(z,1+M);
+  return 128>x and 152 or 90,x,P,f,d,K;
+  else local x=readu8(z,1+M);
+  return x>=128 and 38 or 83,r,P,f,x,K;
+  end;
+  elseif Z<=12 then local x=readu8(z,2+M);
+  return x>=128 and 161 or 140,r,x,f,d,K;
+  elseif Z<=13 then local Z=readu8(z,M);
+  return 128<=Z and 11 or 154,r,P,Z,d,K;
+  else local K=readu8(z,1+M);
+  return K<128 and 15 or 172,r,P,f,d,K;
+  end;
+  end
+
+;; ======== 方法 G（319 字符）========
+  function(j,K,Z,M,d,P,z,r,f)
+  if d<=15 then local x=r+(M-128)*128;
+  return 26,2+P,f,K,x;
+  elseif d<=16 then local d,r,x=z[3],z[4],z[2];
+  local S,b=d+r,r<=0;r,d=S>=x,S<=x;x=b and r or not b and d;z[3]=S;
+  if x then
+  return 167,P,S,K,M;
+  else
+  return 73,P,f,K,M;
+  end;
+  else local K=readu8(Z,2+P);
+  return 128<=K and 106 or 69,P,f,K,M;
+  end;
+  end
+
+;; ======== 方法 H（257 字符）========
+  function(j,K,Z,M,d,P,z,r,f)
+  if M<=18 then local x=readu8(P,f+2);
+  return 128<=x and 147 or 79,x,f,Z,d;
+  elseif M<=19 then local M,x=128*(d-128),(K-128)*16384;
+  local K=M+r+x;
+  return 23,z,3+f,Z,K;
+  else local K=readu8(P,1+f);
+  return K>=128 and 74 or 107,z,f,K,d;
+  end;
+  end
+
+;; ======== 方法 Z（477 字符）========
+  function(j,K,Z,M,d,P,z,r,f,x,S,b,I)
+  if z<=22 then
+  if z<=21 then local G=(d-128)*128;
+  local Y=(f-128)*16384+(P+G);
+  return 54,K,b+3,M,r,I,Y,x,S;
+  else local P=readu8(Z,r);
+  return 128<=P and 65 or 39,K,b,M,r,P,d,x,S;
+  end;
+  elseif z<=23 then local Z=x-79866;
+  local P,f,G=table_get(Z),table_get(Z),1+0;
+  local Y=1-G;
+  return 168,{G,nil,K,Z+0,Y},b,M,r,I,d,P,f;
+  elseif z<=24 then
+  return 66,K,b,128*(M-128)+r,2,I,d,x,S;
+  else local Z,P,z=table_get(M),table_get(M),1+0;
+  return 103,{nil,1-z,M+0,z,K},b,Z,P,I,d,x,S;
+  end;
+  end
+
+;; ======== 方法 K（435 字符）========
+  function(j,K,Z,M,d,P,z,r,f,x,S,b,I)
+  if P<=28 then
+  if P<=26 then z[x]=K;
+  return 168,f,r,S,d,I;
+  elseif P<=27 then
+  return 25,f,r+1,S,d,I;
+  else
+  return 54,f,1+r,S,d,I;
+  end;
+  elseif P<=29 then
+  return 37,f+128*(M-128),2+r,S,d,I;
+  elseif P<=30 then local K=readu8(f,r+1);
+  return 128>K and 158 or 118,f,r,S,K,I;
+  else local K,M,P=readu8(f,3+S),16384*(I-128),Z-128;
+  local j=128*(b-128)+(P+(K%128*2097152+(M+(K-K%128)*2097152)));
+  return 146,f,r,S+4,d,j;
+  end;
+  end
+
+;; ======== 方法 D（375 字符）========
+  function(j,K,Z,M,d,P,z,r)
+  if z<=33 then
+  if z<=32 then
+  return 141,P,Z,d+1,K,M;
+  else local f=readu8(r,1);
+  return 128<=f and 80 or 24,P,Z,f,K,M;
+  end;
+  elseif z<=34 then local f,x=table_get(Z),1+0;
+  return 82,{1-x,nil,x,P,Z+0},f,d,K,M;
+  elseif z<=35 then local z,f=readu32(r,d),4+d;
+  local x,S,b,I=readu32(r,f),f+4,K-K%1,1+0;f=b-I;
+  return 89,{nil,z+0,I,P,f},Z,z,x,S;
+  else
+  return 22,P,Z,d+2,K,M;
+  end;
+  end
+
+;; ======== 方法 M（413 字符）========
+  function(j,K,Z,M,d,P,z,r,f,x,S,b)
+  if r<=39 then
+  if r<=37 then M[-2]=z;M[-1]={};setmetatable(M,f);
+  return 1,40,j[b](j,nil,nil,M,nil),x,S,K;
+  elseif r<=38 then local z=readu8(P,2+M);
+  return 1,z>=128 and 49 or 108,b,M,S,z;
+  else
+  return 1,5,b,M+1,S,K;
+  end;
+  elseif r<=40 then
+  return 2;
+  elseif r<=41 then local z=readu8(P,M+2);
+  return 1,z<128 and 170 or 59,b,M,z,K;
+  else local j=128*(K-128)+(d+16384*(Z-128));
+  return 1,26,b,M+3,S,j;
+  end;
+  end
+
+;; ======== 方法 U（453 字符）========
+  function(j,K,Z,M,d,P,z,r,f,x,S,b,I)
+  if z<=44 then
+  if z<=43 then local G=readu8(I,x+3);
+  local Y,y,D,w=(d-128)*16384,K-128,128*(f-128),2097152*(G%128);
+  local N=(G-G%128)*2097152+Y+w+y+D;
+  return 22,I,4+x,N,K,Z;
+  else local G=f+128*(K-128);
+  return 5,I,2+x,d,G,Z;
+  end;
+  elseif z<=45 then
+  if 1==r then
+  return 120,I,x,d,K,Z;
+  else
+  return 40,P,x,d,K,Z;
+  end;
+  elseif z<=46 then b[M]=S;
+  return 67,I,x,d,K,Z;
+  else local Z=readu8(I,x+1);
+  return Z>=128 and 97 or 105,I,x,d,K,Z;
+  end;
+  end
+
+;; ======== 方法 L（282 字符）========
+  function(j,K,Z,M,d,P,z,r)
+  if Z<=48 then
+  return 159,r+1,P,K;
+  elseif Z<=49 then local Z=readu8(M,3+r);
+  local f,x,S,b=16384*(K-128),z-128,(d-128)*128,2097152*(Z%128);
+  local d=2097152*(Z-Z%128)+(S+f+(x+b));
+  return 46,4+r,P,d;
+  else local Z=readu8(M,r+1);
+  return 128>Z and 98 or 87,r,Z,K;
+  end;
+  end
+
+;; ======== 方法 Q（321 字符）========
+  function(j,K,Z,M,d,P,z,r,f,x)
+  if z<=51 then local S=P+(f-128)*128;
+  return 159,2+r,S,Z,d;
+  elseif z<=52 then local P=readu8(M,r+3);
+  local z,S,b,I,G=(d-128)*16384,x-128,(K-128)*128,P%128*2097152,P%128;
+  local K=(P-G)*2097152;P=S+b+(z+I)+K;
+  return 26,r+4,f,Z,P;
+  else local K=readu8(M,1+r);
+  return 128<=K and 162 or 165,r,f,K,d;
+  end;
+  end
+
+;; ======== 方法 r（350 字符）========
+  function(j,K,Z,M,d,P,z,r,f,x,S)
+  if M<=55 then
+  if M<=54 then f[K]=d;
+  return 103,S,Z,K,r,x;
+  else local f=readu8(S,P);
+  return 128<=f and 4 or 138,S,Z,K,r,f;
+  end;
+  elseif M<=56 then local P=readu8(S,2+Z);
+  return 128>P and 123 or 93,S,Z,P,r,x;
+  elseif M<=57 then
+  return 85,S,Z,K,z+128*(r-128),x;
+  else local j=128*(K-128);
+  return 37,16384*(d-128)+S+j,Z+3,K,r,x;
+  end;
+  end
+
+;; ======== 方法 b（315 字符）========
+  function(j,K,Z,M,d,P,z,r,f,x)
+  if r<=59 then local S=readu8(M,3+P);
+  local b,I,G,Y=(Z-128)*16384,x-128,128*(d-128),2097152*(S%128);
+  return 34,I+(S-S%128)*2097152+Y+(G+b),P+4,d,z;
+  elseif r<=60 then local r=readu8(M,P);
+  return 128<=r and 20 or 32,Z,P,d,r;
+  else local j=(d-128)*128+(16384*(f-128)+K);
+  return 5,Z,3+P,j,z;
+  end;
+  end
+
+;; ======== 方法 s（178 字符）========
+  function(j,K,Z,M,d,P,z,r,f)
+  if K<=62 then local x=readu8(P,Z);
+  return 128<=x and 30 or 28,f,M,x,d;
+  elseif K<=63 then
+  return 34,128*(f-128)+r,2+M,z,d;
+  else
+  return 16,f,M,z,d+1;
+  end;
+  end
+
+;; ======== 方法 l（538 字符）========
+  function(j,K,Z,M,d,P,z,r,f,x,S,b,I,G)
+  if f<=66 then
+  if f<=65 then local Y=readu8(Z,G+1);
+  return 128>Y and 44 or 114,b,M,G,K,Y,z,S;
+  else local j;
+  local Z=b[6];
+  if x==2 then
+  return 122,b,Z,G,K,d,z,S;
+  else
+  return 45,j,M,G,Z,d,z,S;
+  end;
+  end;
+  elseif f<=67 then local j,Z,x=P[2],P[1],P[4];
+  local Y,y=j+Z,Z<=0;Z,j=Y>=x,Y<=x;x=y and Z or not y and j;P[2]=Y;
+  if x then
+  return 13,b,M,G,K,d,z,Y;
+  else
+  return 109,b,M,G,K,d,z,S;
+  end;
+  elseif f<=68 then
+  return 88,b,M,1+G,K,d,z,S;
+  else local j=128*(z-128);
+  local Z=16384*(r-128)+(I+j);
+  return 126,b,M,3+G,K,d,Z,S;
+  end;
+  end
+
+;; ======== 方法 k（421 字符）========
+  function(j,K,Z,M,d,P,z,r,f,x,S,b,I,G,Y,y,D,w,N,c,V,u)
+  if Z<=70 then local R=d+128*(f-128);
+  return 146,V,r,x,w+2,R,I,Y;
+  elseif Z<=71 then local Z=I-79866;
+  local R,e,W=table_get(Z),table_get(Z),1+0;
+  return 67,{W,1-W,nil,Z+0,V},r,x,w,f,R,e;
+  else local Z={};Y[-2]=I;b[-2]=N;G[-2]=z;P[-2]=y;Y[-1]=Z;b[-1]=Z;G[-1]=Z;P[-1]=Z;setmetatable(Y,u);setmetatable(b,u);setmetatable(G,u);setmetatable(P,u);
+  return 40,V,f,j[K](j,nil,M,S,d,b,N,D,y,I,nil,c,Y,P,G,x,z),w,f,I,Y;
+  end;
+  end
+
+;; ======== 方法 B（159 字符）========
+  function(j,K,Z,M,d,P)
+  if Z<=73 then
+  return 6,K[5],d,P;
+  elseif Z<=74 then local Z=readu8(M,2+d);
+  return 128<=Z and 144 or 128,K,d,Z;
+  else
+  return 137,K,1+d,P;
+  end;
+  end
+
+;; ======== 方法 N（215 字符）========
+  function(j,K,Z,M,d,P,z,r,f,x)
+  if f<=76 then local f=readu8(M,K+3);
+  local j,M,S,b=16384*(x-128),z-128,128*(r-128),f%128*2097152;
+  local z=M+((f-f%128)*2097152+j)+S+b;
+  return 137,P,4+K,d,z;
+  else
+  return 64,P[4],Z,K,x;
+  end;
+  end
+
+;; ======== 方法 f（339 字符）========
+  function(j,K,Z,M,d,P,z,r,f,x,S)
+  if M<=78 then local b=readu8(d,S+3);
+  local I,G,Y,y,D=(f-128)*16384,Z-128,128*(K-128),b%128*2097152,b%128;
+  local K=2097152*(b-D);D=Y+G+(K+I+y);
+  return 5,P,x,4+S,r,D;
+  elseif M<=79 then local K=128*(P-128);
+  return 157,z+16384*(x-128)+K,S+3,S,r,f;
+  else local K=readu8(d,2);
+  return K>=128 and 131 or 81,P,x,S,K,f;
+  end;
+  end
+
+;; ======== 方法 j（306 字符）========
+  function(j,j,K,Z,M,d,P,z)
+  if M<=81 then
+  return 66,d+((z-128)*128+16384*(P-128)),3,d,K;
+  elseif M<=82 then local M,r,f=j[1],j[3],j[5];
+  local x,S=M+r,r<=0;M,r=x>=f,x<=f;f=S and M or not S and r;j[1]=x;
+  if f then
+  return 101,z,P,x,K;
+  else
+  return 143,z,P,d,K;
+  end;
+  else local j=Z+128*(K-128);
+  return 46,z,2+P,d,j;
+  end;
+  end
+
+;; ======== 方法 q（268 字符）========
+  function(j,K,Z,M,d,P,z,r)
+  if Z<=84 then local f=readu8(d,r);
+  return 128<=f and 14 or 160,r,M,f;
+  elseif Z<=85 then
+  return 126,2+r,M,K;
+  else local Z,f,x,S=readu8(d,3+r),16384*(M-128),z-128,128*(P-128);
+  local j=Z%128*2097152+2097152*(Z-Z%128)+(S+x+f);
+  return 23,4+r,j,K;
+  end;
+  end
+
+;; ======== 方法 F（447 字符）========
+  function(j,K,Z,M,d,P,z,r)
+  if d<=88 then
+  if d<=87 then local f=readu8(M,K+2);
+  return 128<=f and 9 or 130,K,Z,r,f;
+  else local f=readu8(M,K);
+  return 128>f and 121 or 134,K,f,r,z;
+  end;
+  elseif d<=89 then local f,x,S=P[5],P[3],P[2];
+  local b,I=f+x,x<=0;x,f=b>=S,b<=S;S=I and x or not I and f;P[5]=b;
+  if S then
+  return 113,K,Z,b,z;
+  else
+  return 77,K,Z,r,z;
+  end;
+  elseif d<=90 then local d=readu8(M,K+2);
+  return 128>d and 133 or 153,K,Z,d,z;
+  else
+  return 66,1,Z,r,z;
+  end;
+  end
+
+;; ======== 方法 a（463 字符）========
+  function(j,K,Z,M,d,P,z,r,f,x,S,b,I,G)
+  if S<=93 then
+  if S<=92 then local Y=I+128*(z-128);
+  return 23,f,G,Z,d,x+2,M,Y;
+  else local I=readu8(P,Z+3);
+  local j,P,Y,y,D=(d-128)*16384,x-128,128*(r-128),2097152*(I%128),I%128;
+  local r=2097152*(I-D);I=P+Y+(r+y+j);
+  return 25,f,G,4+Z,I,x,M,z;
+  end;
+  elseif S<=94 then
+  return 60,f[3],G,Z,d,x,M,z;
+  elseif S<=95 then
+  return 157,f,128*(G-128)+Z,2+x,d,x,M,z;
+  else local j=(M-128)*128;
+  local M=b+(K-128)*16384+j;
+  return 146,f,G,Z,d,3+x,M,z;
+  end;
+  end
+
+;; ======== 方法 h（293 字符）========
+  function(j,K,Z,M,d,P,z,r,f)
+  if r<=98 then
+  if r<=97 then local x=readu8(f,M+2);
+  return x<128 and 112 or 148,M,d,x;
+  else local x=128*(d-128)+Z;
+  return 139,M+2,x,K;
+  end;
+  elseif r<=99 then
+  return 22,M+1,d,K;
+  elseif r<=100 then
+  return 126,1+M,d,K;
+  else local Z;z[P],Z=readu32(f,M),4+M;
+  return 82,Z,d,K;
+  end;
+  end
+
+;; ======== 方法 A（346 字符）========
+  function(j,K,Z,M,d,P,z,r,f)
+  if M<=102 then local x=128*(d-128);
+  local S=(K-128)*16384+(x+Z);
+  return 22,r,3+P,S,K;
+  elseif M<=103 then local Z,M,x=z[2],z[4],z[3];
+  local S,b=Z+M,M<=0;Z,M=S>=x,S<=x;x=b and Z or not b and M;z[2]=S;
+  if x then
+  return 62,r,P,d,S;
+  else
+  return 117,r,P,d,K;
+  end;
+  else local Z=readu8(f,P+1);
+  return 128<=Z and 18 or 95,Z,P,d,K;
+  end;
+  end
+
+;; ======== 方法 C（301 字符）========
+  function(j,K,Z,M,d,P,z,r,f,x)
+  if z<=105 then local S=(r-128)*128+f;
+  return 71,2+M,x,Z,S;
+  elseif z<=106 then local z=readu8(K,3+M);
+  local j,K,f,S=16384*(x-128),d-128,(P-128)*128,2097152*(z%128);
+  local d=2097152*(z-z%128)+(f+j)+S+K;
+  return 126,4+M,d,Z,r;
+  else local j=(Z-128)*128+r;
+  return 141,M+2,x,j,r;
+  end;
+  end
+
+;; ======== 方法 m（447 字符）========
+  function(j,K,Z,M,d,P,z,r,f,x,S,b,I,G)
+  if I<=109 then
+  if I<=108 then local Y=128*(x-128);
+  local y=Z+(16384*(f-128)+Y);
+  return 46,M,b,S+3,K,z,r,y;
+  else
+  return 55,M[5],b,S,K,z,r,x;
+  end;
+  elseif I<=110 then local Z=readu8(b,S+1);
+  return Z>=128 and 17 or 57,M,b,S,K,Z,r,x;
+  elseif I<=111 then local Z=readu8(b,d);
+  if Z<128 then
+  return 125,M,Z,S,K,z,r,x;
+  else
+  return 164,M,b,S,Z,z,r,x;
+  end;
+  else local j=(r-128)*128+(16384*(P-128)+G);
+  return 71,M,b,3+S,K,z,j,x;
+  end;
+  end
+
+;; ======== 方法 t（374 字符）========
+  function(j,K,Z,M,d,P,z,r,f,x)
+  if z<=115 then
+  if z<=113 then r[f]=M;
+  return 89,x,K,M,r;
+  elseif z<=114 then local f=readu8(d,Z+2);
+  return 128<=f and 78 or 61,x,K,f,r;
+  else local f=readu8(d,Z+1);
+  return 128>f and 63 or 41,x,f,M,r;
+  end;
+  elseif z<=116 then
+  return 151,x[5],K,M,r;
+  elseif z<=117 then
+  return 111,x[5],K,M,r;
+  else local Z=readu8(d,2+P);
+  return 128>Z and 21 or 7,x,K,M,Z;
+  end;
+  end
+
+;; ======== 方法 u（387 字符）========
+  function(j,K,Z,M,d,P,z,r,f)
+  if M<=120 then
+  if M<=119 then local x=readu8(d,P);
+  return 128<=x and 127 or 99,r,z,f,P,x;
+  else local x=readu8(d,P);
+  return x>=128 and 104 or 149,x,z,f,P,K;
+  end;
+  elseif M<=121 then
+  return 146,r,z,f,1+P,K;
+  elseif M<=122 then local M=readu8(d,P);
+  return M>=128 and 115 or 135,r,z,M,P,K;
+  else local j,M=128*(f-128),(P-128)*16384;
+  local d=j+Z+M;
+  return 25,r,3+z,d,P,K;
+  end;
+  end
+
+;; ======== 方法 T（446 字符）========
+  function(j,K,Z,M,d,P,z,r,f,x,S,b,I,G)
+  if P<=126 then
+  if P<=124 then local Y=readu8(b,x+2);
+  return 128<=Y and 86 or 19,M,x,d,Z,S,Y;
+  elseif P<=125 then
+  return 37,1+M,x,d,Z,S,K;
+  else local Y=readu8(b,x);
+  return 128>Y and 75 or 53,M,x,d,Y,S,K;
+  end;
+  elseif P<=127 then local Y=readu8(b,x+1);
+  return 128>Y and 132 or 145,M,x,Y,Z,S,K;
+  elseif P<=128 then local j=(S-128)*128+((f-128)*16384+I);
+  return 141,M,x+3,d,Z,j,K;
+  else r[z]=G-G%1;
+  return 64,M,x,d,Z,S,K;
+  end;
+  end
+
+;; ======== 方法 O（251 字符）========
+  function(j,K,Z,M,d,P,z,r,f)
+  if K<=130 then local K=(P-128)*128;
+  local x=16384*(d-128)+(K+z);
+  return 139,M,r+3,x;
+  else local K=readu8(Z,3);
+  local j,Z,d,z,x=(M-128)*16384,r-128,(f-128)*128,2097152*(K%128),(K-K%128)*2097152;
+  return 66,j+d+(x+(z+Z)),4,P;
+  end;
+  end
+
+;; ======== 方法 o（228 字符）========
+  function(j,K,Z,M,d,P,z,r,f)
+  if d<=132 then
+  return 36,r,z+(Z-128)*128,K,M;
+  elseif d<=133 then local d=(K-128)*128;
+  local z=M+(16384*(f-128)+d);
+  return 88,3+r,Z,z,M;
+  else local M=readu8(P,r+1);
+  return M<128 and 70 or 156,r,Z,K,M;
+  end;
+  end
+
+;; ======== 方法 R（392 字符）========
+  function(j,K,Z,M,d,P,z,r,f,x,S)
+  if Z<=137 then
+  if Z<=135 then
+  return 34,z,1+x,M,S,f;
+  elseif Z<=136 then
+  return 72,z[3],x,M,S,f;
+  else local b=S-79866;
+  local I,G,Y=table_get(b),table_get(b),1+0;
+  return 173,{1-Y,Y,z,b+0,nil},x,M,I,G;
+  end;
+  elseif Z<=138 then
+  return 23,z,x+1,M,S,f;
+  elseif Z<=139 then S[P]=d;
+  return 173,z,x,M,S,f;
+  else local j=(M-128)*128;
+  local Z=r+(16384*(K-128)+j);
+  return 159,z,x+3,Z,S,f;
+  end;
+  end
+
+;; ======== 方法 v（463 字符）========
+  function(j,K,Z,M,d,P,z,r,f)
+  if z<=142 then
+  if z<=141 then local x=readu8(r,Z);
+  return x<128 and 169 or 47,d,Z,f,M,x;
+  else local x=readu8(r,Z);
+  return 128<=x and 50 or 155,d,Z,f,M,x;
+  end;
+  elseif z<=143 then
+  return 119,d[4],Z,f,M,K;
+  elseif z<=144 then local z=readu8(r,3+Z);
+  local x,S,b,I,G=16384*(M-128),K-128,128*(P-128),z%128*2097152,z%128;
+  local P=2097152*(z-G);z=b+S+(P+I+x);
+  return 141,d,Z+4,f,z,K;
+  else local P=readu8(r,2+Z);
+  return P<128 and 102 or 43,d,Z,P,M,K;
+  end;
+  end
+
+;; ======== 方法 V（418 字符）========
+  function(j,K,Z,M,d,P,z,r,f,x,S)
+  if K<=146 then local b=readu8(M,r);
+  return 128>b and 100 or 110,d,f,r,b,z;
+  elseif K<=147 then local K=readu8(M,3+r);
+  local b,I,G,Y,y=16384*(d-128),f-128,(Z-128)*128,K%128*2097152,2097152*(K-K%128);
+  return 157,b+I+Y+G+y,4+r,r,x,z;
+  else local K=readu8(M,3+r);
+  local j,Z,M,b,I=16384*(z-128),S-128,(P-128)*128,2097152*(K%128),K%128;
+  local P=(K-I)*2097152;K=b+Z+(j+P)+M;
+  return 71,d,f,r+4,x,K;
+  end;
+  end
+
+;; ======== 方法 i（229 字符）========
+  function(j,K,Z,M,d,P,z,r)
+  if K<=149 then
+  return 157,r,1+z,z,Z,M;
+  elseif K<=150 then local K=readu8(d,z);
+  return 128>K and 48 or 166,r,P,z,Z,K;
+  else local K,Z,M=readu32(d,z),z+4,1+0;
+  local j=1-M;
+  return 16,{nil,K+0,j,M,r},P,Z,1,{};
+  end;
+  end
+
+;; ======== 方法 g（391 字符）========
+  function(j,K,Z,M,d,P,z,r)
+  if d<=153 then
+  if d<=152 then local f=P+128*(z-128);
+  return 88,2+r,f,M;
+  else local f=readu8(Z,r+3);
+  local x,S,b,I,G=(z-128)*16384,P-128,128*(K-128),2097152*(f%128),f%128;
+  local K=2097152*(f-G);f=I+S+(b+x+K);
+  return 88,4+r,f,M;
+  end;
+  elseif d<=154 then
+  return 46,r+1,z,M;
+  elseif d<=155 then
+  return 139,r+1,z,M;
+  else local K=readu8(Z,2+r);
+  return 128>K and 96 or 31,r,z,K;
+  end;
+  end
+
+;; ======== 方法 I（504 字符）========
+  function(j,K,Z,M,d,P,z,r,f,x,S,b,I)
+  if x<=159 then
+  if x<=157 then local G=readu8(b,Z);
+  return 128>G and 27 or 0,Z,G,I,r,S,d;
+  elseif x<=158 then local G=128*(r-128)+f;
+  return 54,2+Z,M,I,G,S,d;
+  else K[f]=S;
+  return 2,Z,M,I,r,S,d;
+  end;
+  elseif x<=160 then
+  return 26,Z,M,I+1,r,S,d;
+  elseif x<=161 then local K=readu8(b,I+3);
+  local f,x,G,Y=16384*(S-128),P-128,(z-128)*128,2097152*(K%128);
+  local P=G+2097152*(K-K%128)+(Y+(x+f));
+  return 159,Z,M,4+I,r,P,d;
+  else local K=readu8(b,2+I);
+  return K<128 and 3 or 76,Z,M,I,r,S,K;
+  end;
+  end
+
+;; ======== 方法 E（511 字符）========
+  function(j,K,Z,M,d,P,z,r,f,x,S)
+  if K<=164 then
+  if K<=163 then local b=readu8(d,0);
+  return 128<=b and 33 or 91,d,nil,b,r,P,f,Z,S;
+  else local b=readu8(d,1+z);
+  if 128>b then
+  return 29,b,z,x,r,P,f,Z,S;
+  else
+  return 1,d,z,x,r,b,f,Z,S;
+  end;
+  end;
+  elseif K<=165 then local b=M+(S-128)*128;
+  return 137,d,z,x,2+r,P,f,Z,b;
+  elseif K<=166 then local K=readu8(d,1+r);
+  return K>=128 and 12 or 51,d,z,x,r,P,f,K,S;
+  else local K,M=readu32(d,r),r+4;
+  local j=K/2;
+  if K%2==0 then
+  return 129,d,z,x,M,P,f,j,S;
+  else
+  return 35,d,z,x,M,P,j,Z,S;
+  end;
+  end;
+  end
+
+;; ======== 方法 d（279 字符）========
+  function(j,j,K,Z,M,d,P,z)
+  if M<=168 then local r,f,x=d[5],d[1],d[4];
+  local S,b=r+f,f<=0;r,f=S>=x,S<=x;x=b and r or not b and f;d[5]=S;
+  if x then
+  return 84,j,Z,S;
+  else
+  return 136,j,Z,K;
+  end;
+  elseif M<=169 then
+  return 71,j,1+Z,K;
+  else
+  return 34,128*(j-128)+(16384*(P-128)+z),3+Z,K;
+  end;
+  end
+
+;; ======== 方法 yW（320 字符）========
+  function(j,K,Z,M,d,P,z,r,f)
+  if z<=171 then local x=K+128*(d-128);
+  return 25,f+2,x,r,Z;
+  elseif z<=172 then local z=readu8(P,2+K);
+  return 128<=z and 52 or 42,f,d,r,z;
+  else local j,K,P=M[1],M[2],M[4];
+  local z,x=j+K,K<=0;j,K=z>=P,z<=P;P=x and j or not x and K;M[1]=z;
+  if P then
+  return 142,f,d,z,Z;
+  else
+  return 94,f,d,r,Z;
+  end;
+  end;
+  end
