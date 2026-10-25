@@ -1,14 +1,12 @@
 /**
- * 控制流“半结构化”重建。
+ * 控制流「半结构化」重建。
  *
- * 这个 VM 的条件跳转是「测试 + 下一条 JMP」两连：TEST/CMP 为真时 pc+2（跳过 JMP），
- * 为假时执行 JMP。所以一条 if 语句正好对应这两条指令：
+ * 只做一件事：把 TEST/CMP + 紧跟的 JMP 折叠成 if。这一步是**局部语义**，不依赖全局
+ * 跳转图，所以可靠。
  *
- *   TEST r5
- *   JMP  L0180        →   if not r5 then goto L0180 end
- *
- * 剩下的是基本块标签和无条件跳转。这不是真反编译（不重建 while/for、不做支配树），
- * 但输出的已经是 Lua 语句而不是指令流。
+ * 不做（也做不了）：while/for 识别。原因见 README —— 这个 VM 的跳转目标字段只有
+ * 0..255（8 位），而单个函数可能有 800+ 条指令，说明寻址不是简单的绝对 pc，页号存在
+ * 我们还没找到的地方。跳转图不完整，任何循环推断都会是错的，所以干脆不做。
  */
 
 // 各版本条件指令的操作数位置（实读 handler 得到）
@@ -71,10 +69,7 @@ export function structured(proto, version, constOf, opNames, tpl, describe) {
 
     let i = 0;
     while (i < n) {
-        if (targets.has(i) || i === 0) {
-            const heads = loopHeads.get(i);
-            lines.push(`${label(i)}:${heads ? `   -- 推测是循环头（回边来自 ${heads.map(label).join(", ")}，未做支配树验证）` : ""}`);
-        }
+        if (targets.has(i) || i === 0) lines.push(`${label(i)}:`);
         const nm = opNames?.[op[i]];
 
         // TEST / CMP + 紧跟的 JMP → 一条 if
@@ -84,8 +79,7 @@ export function structured(proto, version, constOf, opNames, tpl, describe) {
             const jmpTarget = resolve(jmpTargetOf(i + 1));
             if (condExpr) {
                 const note = describe ? describe(i) : "";
-                const back = backEdges.has(i + 1) ? "   -- 推测是回边（未验证）" : "";
-                lines.push(`  if not (${condExpr}) then goto ${label(jmpTarget)} end${back}${note ? "   ; " + note : ""}`);
+                lines.push(`  if not (${condExpr}) then goto ${label(jmpTarget)} end${note ? "   ; " + note : ""}`);
                 i += 2;
                 continue;
             }
