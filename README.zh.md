@@ -20,7 +20,7 @@ node luaguard-unpack.mjs --url https://example.com/protected.lua -o unpacked
 | `globals.json` | 全局数值常量 |
 | `disasm.txt` | **全部**函数原型（主函数 + 所有嵌套子函数）的反汇编，带 opcode 名、操作数、常量值注释 |
 | `pseudocode.txt` | **线性伪代码**（v2/v3）：每条指令一行语句 |
-| `structured.txt` | **条件跳转合并成 if**（TEST/CMP + JMP 两连折成一条） |
+| `structured.txt` | **条件跳转合并成 if** + 寄存器来源注释（TEST/CMP + JMP 两连折成一条） |
 | `structure.json` | 机器可读的完整结构 + 校验结论 |
 
 ## 为什么结果可信
