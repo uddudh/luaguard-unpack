@@ -255,3 +255,67 @@ P = (function() if f[G[P]] ~= z[P] then return r[P] else return P end end)()
 ### 样本
 
 `tools/luraph/luraph_sample.lua`（Moondiety 加载器，312KB，Luraph v15.1）
+
+---
+
+## Luau 语法问题的完整记录（2026-10-26 晚）
+
+### 核心阻塞
+
+Luraph 用了 **Luau 的 `if` 表达式**：
+
+```lua
+P = if f[G[P]] ~= z[P] then r[P] else P
+```
+
+标准 Lua 5.4 不支持，必须转成：
+
+```lua
+P = (function() if f[G[P]] ~= z[P] then return r[P] else return P end end)()
+```
+
+### 为什么难：语句 if 和表达式 if 在 token 层无法区分
+
+```lua
+-- 表达式（无 end）
+x = if C then A else B
+
+-- 语句（有 end）
+if C then ... end
+if C then ... elseif ... end
+
+-- 混合（最难）
+then if C then local Y = ... ; return ... ; else ... end   ← 语句
+then if C then A else B                                    ← 表达式
+```
+
+**判断规则（已实现）**：
+1. `then` 后是 `local`/`for`/`while`/`return`/`break`/`do` → 语句 if
+2. `then` 后是 `if` → 递归判断
+3. `then` 分支里有顶层 `=`（赋值）→ 语句 if
+4. 其余 → 表达式 if
+
+**仍失败的场景**：深层嵌套 + 赋值 + 多语句混合。
+
+### 已完成的工具
+
+| 文件 | 作用 |
+|---|---|
+| `tools/luau/tokenizer.mjs` | Lua/Luau 词法分析器（100 行，正确分割 61,866 token） |
+| `tools/luau/if-expr-converter-v4.mjs` | 基于 token 的 if 表达式转换器 |
+| `tools/luau/conv51e.mjs` | 只转 [51] 主函数（用于隔离测试） |
+
+### 尝试过的失败方案
+
+1. **正则替换**：遇到嵌套就错
+2. **Luau WASM**：`Luau.Web.js`（4.2MB Emscripten）能加载，但抓不到导出函数（`WebAssembly.instantiate` 被内部包装，无法拦截）
+3. **Luau 官方 release**：只有 macOS/Ubuntu/Windows/Web 版本，无 ARM64
+
+### 下一步（给未来的自己）
+
+**需要真正的 Lua/Luau 语法分析器**（parser + AST），约 500-800 行：
+- 词法：已有（tokenizer.mjs）
+- 语法：需要递归下降解析语句/表达式
+- 出 AST 后，判断 `if` 表达式变得**确定**（AST 节点类型）
+
+**或者**：找个能在 aarch64 上跑的 Luau 编译版本（自己编译 Luau 源码）。
