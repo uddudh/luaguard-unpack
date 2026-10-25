@@ -56,12 +56,11 @@ const V3 = {
     // 同上：pc 1-based → 索引 0-based
     JMP: (a, b, c) => `goto L${String(c - 1).padStart(4, "0")}`,
     TEST: (a, b, c) => `if not r${a} then`,
-    ADDI: (a, b, c) => `r${a} = r${a} + ${c}`,
-    SUBI: (a, b, c) => `r${c} = r${b} - r${a}`,
+    SUBI: (a, b, c) => `r${c} = r${a} - r${b}`,        // handler: R[k]=R-O → R[c]=a-b
     NEWTABLE: (a, b, c) => `r${c} = {}`,
     SETNIL: (a, b) => `r${b} = nil`,
-    GETUPVAL: (a, b, c) => `r${c} = up[${b}]`,
-    SETUPVAL: (a, b, c) => `up[${c}] = r${b}`,
+    GETUPVAL: (a, b, c) => `r${b} = up[${a}]`,        // up[R] → R[O]
+    SETUPVAL: (a, b, c) => `up[${c}] = r${a}`,        // up[k] ← R[R]
     CONCAT: (a, b, c) => `r${c} = r${a} .. r${b}`,
     CALL0: (a, b, c) => `r${c} = r${c}()`,
     CALL2: (a, b, c) => `r${b} = r${b}(r${b + 1})`,
@@ -77,10 +76,10 @@ const V3 = {
     CALL0M: (a, b, c) => `rets = r${c}()`,
     CALL3DISCARD: (a, b, c) => `r${c}(r${c + 1}, r${c + 2})   -- discard`,
     ARITH: (a, b, c) => `r${b} = r${a} <op> r${c}   -- mode ${c % 6 + 1}`,
-    CMP: (a, b, c) => `if r${b} <op> r${a} then   -- mode ${b % 3 + 1}`,
+    CMP: (a, b, c) => `if r${b} <op> r${c} then   -- mode ${b % 3 + 1}`,  // R[O] vs R[k]
     CALL2DISCARD: (a, b, c) => `r${c}(r${c + 1})   -- discard`,
     CALL0DISCARD: (a, b) => `r${b}()   -- discard`,
-    NOT: (a, b, c) => `r${a} = not r${b}   -- mode ${c % 3 + 1}`,
+    NOT: (a, b, c) => `r${b} = not r${a}   -- mode ${c % 3 + 1}`,  // R[O]=not R[R]
     CALLMULTI: (a, b, c) => `-- callmulti: build arg table (mode ${b % 3 + 1})`,
 };
 

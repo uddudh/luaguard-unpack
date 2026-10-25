@@ -26,8 +26,8 @@ const LAYOUT = {
         LOADK:        { dst: (a, b, c) => c, src: (a, b, c) => b },
         MOVE:         { dst: (a, b, c) => c, src: (a, b, c) => b },
         GETTABLE:     { dst: (a, b, c) => c, src: (a, b, c) => b, key: (a, b, c) => a },
-        GETGLOBAL:    { dst: (a, b, c) => b, src: (a, b, c) => c },
-        GETUPVAL:     { dst: (a, b, c) => c },
+        GETGLOBAL:    { dst: (a, b, c) => a, src: (a, b, c) => c },
+        GETUPVAL:     { dst: (a, b, c) => b },
         CALL0:        { ret: (a, b, c) => c, fn: (a, b, c) => c },
         CALL2:        { ret: (a, b, c) => b, fn: (a, b, c) => b },
         CALL3:        { ret: (a, b, c) => c, fn: (a, b, c) => c },
@@ -40,8 +40,8 @@ const WRITES = {
           CALL0: "ret", CALL2: "ret", CALL3: "ret", GETRET: "c", CONCAT: "c", ADDI: "c", SUBI: "b",
           NOT: "b", ARITH: "b" },
     v3: { LOADK: "dst", MOVE: "dst", GETTABLE: "dst", GETGLOBAL: "dst", GETUPVAL: "dst", NEWTABLE: "c", SETNIL: "b",
-          CALL0: "ret", CALL2: "ret", CALL3: "ret", GETRET: "c", CONCAT: "c", ADDI: "a", SUBI: "c",
-          NOT: "a", ARITH: "b" },
+          CALL0: "ret", CALL2: "ret", CALL3: "ret", GETRET: "c", CONCAT: "c", SUBI: "c",
+          NOT: "b", ARITH: "b" },
 };
 
 /**

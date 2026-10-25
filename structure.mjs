@@ -26,7 +26,7 @@ const COND = {
         CMP: (a, b, c) => {
             const m = b % 3 + 1;                       // 模式在 b 上
             const ops = { 1: "==", 2: "<", 3: "<=" };
-            return `r${a} ${ops[m]} r${c}`;
+            return `r${b} ${ops[m]} r${c}`;          // handler: R[O] vs R[k]
         },
     },
     v1: {
