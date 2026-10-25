@@ -19,7 +19,8 @@ node luaguard-unpack.mjs --url https://example.com/protected.lua -o unpacked
 | `strings.json` / `strings.txt` | 加密字符串表，**全部解密** |
 | `globals.json` | 全局数值常量 |
 | `disasm.txt` | **全部**函数原型（主函数 + 所有嵌套子函数）的反汇编，带 opcode 名、操作数、常量值注释 |
-| `pseudocode.txt` | **线性伪代码**（v2/v3）：每条指令一行 Lua 风格语句，跳转用标签 |
+| `pseudocode.txt` | **线性伪代码**（v2/v3）：每条指令一行语句 |
+| `structured.txt` | **条件跳转合并成 if**（TEST/CMP + JMP 两连折成一条） |
 | `structure.json` | 机器可读的完整结构 + 校验结论 |
 
 ## 为什么结果可信
@@ -99,7 +100,14 @@ Lua-Guard 每出一个新版本就把整套参数换掉，所以这里没有任�
   0018  LOADK          a=   0 b=   5 c=  18   ; "RbxAnalyticsService"
 ```
 
-v2/v3 还会额外输出 `pseudocode.txt`，把指令渲染成语句：
+v2/v3 有两种可读渲染。`structured.txt` 会把 VM 的「测试 + 跳转」两连折成真正的 if：
+
+```lua
+L0012:
+  if not (r26) then goto L0034 end
+```
+
+`pseudocode.txt` 则是平铺的每指令一行：
 
 ```lua
 L0003:
