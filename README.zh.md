@@ -18,7 +18,7 @@ node luaguard-unpack.mjs --url https://example.com/protected.lua -o unpacked
 | `blob.bin` | 拼接解码后的打包二进制 |
 | `strings.json` / `strings.txt` | 加密字符串表，**全部解密** |
 | `globals.json` | 全局数值常量 |
-| `disasm.txt` | 每个函数原型的反汇编（opcode 已命名） |
+| `disasm.txt` | **全部**函数原型（主函数 + 所有嵌套子函数）的反汇编，带 opcode 名、操作数、常量值注释 |
 | `structure.json` | 机器可读的完整结构 + 校验结论 |
 
 ## 为什么结果可信
@@ -87,6 +87,18 @@ Lua-Guard 每出一个新版本就把整套参数换掉，所以这里没有任�
 | v1 | `Y7[hash]` | 50 |
 | v2 | `QH[hash]` | 33 |
 | v3 | `Vl[hash]` | 33 |
+
+### 反汇编长什么样
+
+每条 `LOADK` / `GETGLOBAL` 后面都跟了解出来的常量，操作数也全部显示，不用反编译器就能读：
+
+```
+  0003  LOADK          a=  40 b=   0 c=  31   ; "Invalid key"
+  0008  LOADK          a=  33 b=   0 c=  16   ; "getgenv"
+  0018  LOADK          a=   0 b=   5 c=  18   ; "RbxAnalyticsService"
+```
+
+嵌套的原型会递归展开（`chunk#0.#2.#1 (depth 3) …`），每个都带自己的校验状态，不留死角。
 
 ## 格式要点
 
