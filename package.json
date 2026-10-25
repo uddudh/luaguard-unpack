@@ -8,7 +8,15 @@
   },
   "files": [
     "luaguard-unpack.mjs",
-    "README.md"
+    "parser.mjs",
+    "pseudo.mjs",
+    "structure.mjs",
+    "regnames.mjs",
+    "loops.mjs",
+    "checkup.mjs",
+    "README.md",
+    "README.zh.md",
+    "LICENSE"
   ],
   "engines": {
     "node": ">=18"

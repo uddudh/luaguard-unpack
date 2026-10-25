@@ -10,6 +10,8 @@
  */
 
 // 各版本条件指令的操作数位置（实读 handler 得到）
+import { findLoops, depthAt } from "./loops.mjs";
+
 const COND = {
     v2: {
         TEST: (a, b, c) => `r${c}`,
@@ -37,6 +39,10 @@ export function structured(proto, version, constOf, opNames, tpl, describe) {
     const { a, b, c, op } = proto.code;
     const n = op.length;
     const cond = COND[version] ?? {};
+    const loops = findLoops(proto, version, opNames);
+    const loopHeaders = new Set(loops.map(l => l.header));
+    // 语句按所在循环深度缩进；标签不缩进，保持扫描跳转目标方便
+    const ind = (i) => "  ".repeat(1 + depthAt(loops, i));
     const lines = [];
     const label = (i) => `L${String(i).padStart(4, "0")}`;
 
@@ -69,17 +75,33 @@ export function structured(proto, version, constOf, opNames, tpl, describe) {
 
     let i = 0;
     while (i < n) {
-        if (targets.has(i) || i === 0) lines.push(`${label(i)}:`);
+        if (targets.has(i) || i === 0) {
+            const loop = loops.find(l => l.header === i);
+            lines.push(`${label(i)}:${loop ? `   -- 循环头（回边在 ${label(loop.latch)}，嵌套深度 ${loop.depth + 1}）` : ""}`);
+        }
         const nm = opNames?.[op[i]];
 
         // TEST / CMP + 紧跟的 JMP → 一条 if
-        if ((nm === "TEST" || nm === "CMP") && i + 1 < n && opNames?.[op[i + 1]] === "JMP") {
+        // v1 的 EQ/LT/LE 是「单指令条件跳转」：为真时 pc+2（跳过下一条），不配 JMP。
+        // 所以它们没法折成 if-end，只能表述成「条件成立就跳过下一条」。
+        if ((nm === "EQ" || nm === "LT" || nm === "LE") && i + 1 < n && opNames?.[op[i + 1]] !== "JMP") {
+            const ce = cond[nm] ? cond[nm](a[i], b[i], c[i]) : null;
+            if (ce) {
+                lines.push(`${ind(i)}if ${ce} then goto ${label(i + 2)} end   -- 单指令条件跳转`);
+                i += 1;
+                continue;
+            }
+        }
+
+        const isCond = nm === "TEST" || nm === "CMP" || nm === "EQ" || nm === "LT" || nm === "LE";
+        if (isCond && i + 1 < n && opNames?.[op[i + 1]] === "JMP") {
             const condExpr = cond[nm] ? cond[nm](a[i], b[i], c[i]) : null;
             // 下一条 JMP 的目标：v2 在 a 字段，v3 在 c 字段
             const jmpTarget = resolve(jmpTargetOf(i + 1));
             if (condExpr) {
                 const note = describe ? describe(i) : "";
-                lines.push(`  if not (${condExpr}) then goto ${label(jmpTarget)} end${note ? "   ; " + note : ""}`);
+                const back = backEdges.has(i + 1) ? "   -- 回边" : "";
+                lines.push(`${ind(i)}if not (${condExpr}) then goto ${label(jmpTarget)} end${back}${note ? "   ; " + note : ""}`);
                 i += 2;
                 continue;
             }
@@ -87,7 +109,7 @@ export function structured(proto, version, constOf, opNames, tpl, describe) {
 
         // 无条件跳转单独处理：目标要经过跳转链折叠，否则可能指向被 if 折叠掉的位置
         if (nm === "JMP") {
-            lines.push(`  goto ${label(resolve(jmpTargetOf(i)))}`);
+            lines.push(`${ind(i)}goto ${label(resolve(jmpTargetOf(i)))}`);
             i += 1;
             continue;
         }
@@ -96,10 +118,11 @@ export function structured(proto, version, constOf, opNames, tpl, describe) {
         const t = tpl?.[nm];
         const note = describe ? describe(i) : "";
         const stmt = t ? t(a[i], b[i], c[i], constOf) : `-- op ${op[i]}  a=${a[i]} b=${b[i]} c=${c[i]}`;
-        lines.push(`  ${stmt}${note && !stmt.includes(note) ? "   ; " + note : ""}`);
+        lines.push(`${ind(i)}${stmt}${note && !stmt.includes(note) ? "   ; " + note : ""}`);
         i += 1;
     }
     lines.push(`${label(n)}:`);
     lines.push("  -- end");
-    return lines.join("\n");
+    // 寄存器上限 255（Lua 语义），超过的一定是解码噪声——显示成 r? 而不是荒谬的数字
+    return lines.join("\n").replace(/\br(\d+)\b/g, (m, d) => (Number(d) > 255 ? "r?" : m));
 }

@@ -36,7 +36,7 @@ const V2 = {
     VARARG: (a, b, c) => `-- vararg: build arg table (mode ${b % 3 + 1})`,
     CALL2DISCARD: (a) => `r${a}(r${a + 1})   -- discard`,
     CALL2M: (a, b) => `rets = r${b}(r${b + 1})`,
-    CLOSURE: (a) => `r? = closure(proto[${a}])`,
+    CLOSURE: (a, b) => `r${b} = closure(proto[${a}])`,
     ARITH: (a, b, c) => `r${b} = r${a} <op> r${c}   -- mode ${c % 6 + 1}: + - * / % ^`,
     CALL3DISCARD: (a, b) => `r${b}(r${b + 1}, r${b + 2})   -- discard`,
     CALL0M: (a, b, c) => `rets = r${c}()`,
@@ -67,7 +67,7 @@ const V3 = {
     CALL2: (a, b, c) => `r${b} = r${b}(r${b + 1})`,
     CALL3: (a, b, c) => `r${c} = r${c}(r${c + 1}, r${c + 2})`,
     GETRET: (a, b, c) => `r${c} = rets[${a}]`,
-    CLOSURE: (a) => `r? = closure(proto[${a}])`,
+    CLOSURE: (a, b, c) => `r${c} = closure(proto[${b}])`,
     NOP: () => `-- nop`,
     VTOB: (a, b, c) => `r[${c}..] = rets`,
     VARARG: (a, b, c) => `-- vararg: build arg table (mode ${b % 3 + 1})`,
@@ -86,28 +86,56 @@ const V3 = {
 
 // v1 (Elton)：操作数布局又是另一套（R[c] = K[b] 这类）
 const V1 = {
-    57: (a, b, c, K) => `r${c} = ${K(b)}`,                        // LOADK
-    13: (a, b, c) => `r${a} = r${b}`,                             // MOVE
-    109: (a, b, c) => `r${b} = r${a}[r${c}]`,                     // GETTABLE
-    116: (a, b, c) => `r${a}[r${c}] = r${b}`,                     // SETTABLE
-    201: (a, b, c) => `r${c} = _ENV[...]`,                        // GETGLOBAL
-    210: (a) => `goto L${a}`,                                     // JMP
-    74: (a, b, c) => `if not r${c} then`,                         // TEST
-    61: (a, b, c) => `r${b} = r${a} + r${c}`,                     // ADD
-    70: (a, b, c) => `r${b} = r${a} - r${c}`,                     // SUB
-    101: (a, b, c) => `r${b} = r${a} * r${c}`,                    // MUL
-    213: (a, b, c) => `r${b} = r${a} / r${c}`,                    // DIV
-    15: (a, b, c) => `r${a} = {}`,                                // NEWTABLE
-    8: (a, b, c) => `r${c} = nil`,                                // SETNIL
-    157: (a, b, c) => `r${a} = up[${c}]`,                         // GETUPVAL
-    53: (a, b, c) => `up[${c}] = r${a}`,                          // SETUPVAL
-    51: (a, b, c) => `r${c} = r${b} .. r${a}`,                    // CONCAT
-    138: (a, b, c) => `r${b} = r${b}()`,                          // CALL0
-    43: (a, b, c) => `r${b} = r${b}(r${b + 1})`,                  // CALL2
-    131: (a, b, c) => `r${a} = r${a}(r${a + 1}, r${a + 2})`,      // CALL3
-    93: (a, b, c) => `r${a} = rets[${b}]`,                        // GETRET
-    152: (a, b, c) => `r${c} = closure(proto[${b}])`,             // CLOSURE
-    212: (a) => `R[${a}..] = rets`,                               // VTOB
+    CALL0M: (a, b, c) => `rets = r${a}()`,
+    LOADK: (a, b, c, K) => `r${c} = ${K(b)}`,
+    MOVE: (a, b, c) => `r${a} = r${b}`,
+    GETTABLE: (a, b, c) => `r${b} = r${a}[r${c}]`,
+    SETTABLE: (a, b, c) => `r${a}[r${c}] = r${b}`,
+    GETGLOBAL: (a, b, c, K) => `r${c} = _ENV[${K(a)}]`,
+    JMP: (a) => `goto L${String(a - 1).padStart(4, "0")}`,
+    TEST: (a, b, c) => `if not r${c} then`,
+    ADD: (a, b, c) => `r${b} = r${a} + r${c}`,
+    SUB: (a, b, c) => `r${b} = r${a} - r${c}`,
+    MUL: (a, b, c) => `r${b} = r${a} * r${c}`,
+    DIV: (a, b, c) => `r${b} = r${a} / r${c}`,
+    NEWTABLE: (a) => `r${a} = {}`,
+    SETNIL: (a, b, c) => `r${c} = nil`,
+    GETUPVAL: (a, b, c) => `r${a} = up[${c}]`,
+    SETUPVAL: (a, b, c) => `up[${c}] = r${a}`,
+    CONCAT: (a, b, c) => `r${c} = r${b} .. r${a}`,
+    CALL0: (a, b, c) => `r${b} = r${b}()`,
+    CALL2: (a, b, c) => `r${b} = r${b}(r${b + 1})`,
+    CALL3: (a, b, c) => `r${a} = r${a}(r${a + 1}, r${a + 2})`,
+    GETRET: (a, b, c) => `r${a} = rets[${b}]`,
+    CLOSURE: (a, b, c) => `r${c} = closure(proto[${b}])`,
+    VTOB: (a) => `r[${a}..] = rets`,
+    VTOA: (a, b, c) => `r${c}[${b}..] = rets`,
+    LEN: (a, b, c) => `r${a} = #r${c}`,
+    NOT: (a, b, c) => `r${a} = not r${c}`,
+    MOD: (a, b, c) => `r${b} = r${a} % r${c}`,
+    POW: (a, b, c) => `r${b} = r${a} ^ r${c}`,
+    UNM: (a, b, c) => `r${a} = -r${c}`,
+    LE: (a, b, c) => `if r${a} <= r${b} then`,
+    LT: (a, b, c) => `if r${a} < r${b} then`,
+    EQ: (a, b, c) => `if r${a} == r${b} then`,
+    TESTNIL: (a, b, c) => `if r${b + 1} ~= nil then r${b} = r${b + 1}; goto L${String(a - 1).padStart(4, "0")} end`,
+    FORPREP: (a, b, c) => `-- numeric for prep (r${a}, step r${a + 2})`,
+    FORLOOP: (a, b, c) => `-- numeric for step`,
+    VARARG: (a, b, c) => `-- vararg: build arg table`,
+    COPYVARARG: (a, b, c) => `r${b}[${c}..] = ...`,
+    CALLV1: (a, b, c) => `r${c} = r${c}(...)`,
+    CALLV0: (a, b, c) => `r${a}(...)   -- discard`,
+    CALLV1M: (a, b, c) => `rets = r${a}(...)`,
+    CALL2VA: (a, b, c) => `r${a} = r${a}(r${a + 1}, ...)`,
+    CALL2M: (a, b, c) => `rets = r${b}(r${b + 1}, ...)`,
+    CALL3M: (a, b, c) => `rets = r${a}(r${a + 1}, r${a + 2})`,
+    CALL1M: (a, b, c) => `rets = r${c}(r${c + 1})`,
+    CALLMULTI: (a, b, c) => `-- callmulti: build arg table (mode ${b % 3})`,
+    CALL2DISCARD: (a, b, c) => `r${a}(r${a + 1})   -- discard`,
+    CALL3DISCARD: (a, b, c) => `r${a}(r${a + 1}, r${a + 2})   -- discard`,
+    CALL0DISCARD: (a, b, c) => `r${a}()   -- discard`,
+    METHODM: (a, b, c) => `-- method call r${b}:...(...)`,
+    RETURNRANGE: (a) => `return r[${a}..]`,
 };
 
 export const TABLES = { v1: V1, v2: V2, v3: V3 };
@@ -133,5 +161,5 @@ export function pseudocode(proto, version, constOf, opNames) {
     }
     lines.push(`L${String(op.length).padStart(4, "0")}:`);
     lines.push("  -- end");
-    return lines.join("\n");
+    return lines.join("\n").replace(/\br(\d+)\b/g, (m, d) => (Number(d) > 255 ? "r?" : m));
 }

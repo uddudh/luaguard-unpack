@@ -57,7 +57,10 @@ export function parseBlob(blob, cfg, opts = {}) {
     const instrCount = M3();
     const keyOff = M3() + IA, shift = M3();
     const key = lcg(cfg.seed, cfg.mix1, cfg.mix2);
-    for (let i = 1; i <= 32; i++) key[i] = bx(key[i], keyOff);
+    // keyOff 是 24 位数，异或结果也是 24 位——用 8 位的 bx() 会把它截断，
+    // 导致每条操作数都带一个固定的大偏移（实测 0x4F0A00 这种）。
+    // 必须走 VM 的 24 位异或（bit32.bxor 语义）。
+    for (let i = 1; i <= 32; i++) key[i] = key[i] ^ keyOff;
 
     const code = {};
     for (const step of cfg.phaseOrder) {
@@ -72,7 +75,13 @@ export function parseBlob(blob, cfg, opts = {}) {
             let d = step.phase;
             for (let i = 0; i < instrCount; i++) {
                 const v = R3(blob, p); p += 3;
-                arr.push(bx(v - IA, key[d]));
+                // VM 里是 `xor(raw, key) - 0x800000`：先异或整个 24 位数，再减偏移。
+                // 顺序反过来（先减再异或）会把高字节也算错，跳转目标就全落在 0..255 了。
+                // R3 已减过 IA，加回去得到 VM 里的 raw 24 位数，做完整异或后再减偏移。
+                // key 只有 8 位，所以异或只改低字节，高 16 位原样保留——这一步必须用
+                // 24 位的异或，用 8 位的 bx() 会把高字节丢掉。
+                const raw = v + IA;
+                arr.push((raw ^ key[d]) - IA);
                 d += 3; if (d > 32) d -= 32;
             }
         }

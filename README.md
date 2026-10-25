@@ -22,8 +22,8 @@ node luaguard-unpack.mjs --url https://example.com/protected.lua -o unpacked
 | `strings.json` / `strings.txt` | the encrypted string table, **fully decrypted** |
 | `globals.json` | numeric constants from the global table |
 | `disasm.txt` | **every** function prototype (main + all nested children), disassembled with named opcodes, operands, and constant values inlined as comments |
-| `pseudocode.txt` | **linear pseudocode** for v2/v3: one statement per instruction |
-| `structured.txt` | **conditional jumps folded into `if`**, plus register provenance comments (TEST/CMP + JMP pairs merged) |
+| `pseudocode.txt` | **linear pseudocode** (all three versions): one statement per instruction |
+| `structured.txt` | **all three versions**: conditional jumps folded into `if`, loop bodies indented, register provenance annotated |
 | `structure.json` | everything above, machine-readable, plus a verification verdict |
 
 ## Why you can trust the output
@@ -152,14 +152,30 @@ L0012:
   if not (r26) then goto L0034 end
 ```
 
-**What is intentionally NOT done:** loop reconstruction. The VM's jump-target field is only
-8 bits wide (observed range 0..255) while a single function can hold 800+ instructions, so the
-target is clearly not a plain absolute program counter — the page/bank must live somewhere we
-have not located yet. With an incomplete jump graph, any loop inference would be guesswork, so
-it is left out rather than guessed.
+**Jump addressing — solved.** Getting the control-flow graph right took three separate fixes, each of
+which alone produced a graph that looked plausible but was wrong:
 
-Register provenance is annotated inline (`; r8 = r10[K["getgenv"]]`), loop head candidates are
-marked, and jump targets are resolved through jump-chains so every `goto` has a matching label.
+1. **The per-prototype key must be XORed at full 24-bit width.** The handler derives it as
+   `xor(lcg_byte, keyOffset)` where `keyOffset` is a 24-bit number. Implementing that as an 8-bit
+   XOR truncates the result and leaves a constant large offset on every operand — jumps then all
+   appear to land in 0..255.
+2. **The program counter is 1-based.** A jump target of `n` means instruction `n-1`; forgetting the
+   `-1` puts every edge one instruction off.
+3. **The jump destination lives in a different operand field per version** — field `c` for v3
+   (`return k`) but field `a` for v2 (`return d`).
+
+After all three, reachability from `start_state` is **92% / 90%** (main / children) on v3 and
+**91% / 90%** on v2. The remaining uncovered instructions sit behind error paths that the checker
+treats as terminators.
+
+Loop bodies are now reconstructed from back-edges: each back-edge defines a [header, latch] range,
+and ranges that would **cross** (partially overlap) another range are dropped rather than drawn,
+since crossing loops cannot exist and always mean a mis-identified back-edge. Surviving ranges are
+nested-checked and their bodies indented, so the output shows structure as well as statements.
+On the two samples this yields 32 loops (v3) and 39 loops (v2).
+
+Register provenance is annotated inline (`; r8 = r10[K["getgenv"]]`), and jump targets are resolved
+through jump-chains so every `goto` has a matching label.
 
 `pseudocode.txt` keeps it flat, one statement per instruction:
 

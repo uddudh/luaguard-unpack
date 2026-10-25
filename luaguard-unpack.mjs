@@ -307,6 +307,14 @@ if (!hmacOk) warn("       warning: global HMAC did not match any embedded digest
 // Rather than hardcode one, we try each known profile and accept the first whose
 // checksum passes AND which consumes the blob to the last byte.
 const MODERN_PROFILES = {
+    v1: {
+        read3: "odd", read4: "odd", seed: 348, mix1: 17, mix2: 173,
+        opMul: 143, checksumConst: 4442017,
+        phaseOrder: [{ key: "op" }, { key: "c", phase: 7 }, { key: "a", phase: 5 }, { key: "b", phase: 6 }],
+        resOrder: ["id", "cipher", "iv", "tag"],
+        // v1 的 opcode 语义（50 个，早前从 handler 逐个读出）
+        opNames: {"3":"VTOA","8":"SETNIL","10":"LEN","13":"MOVE","15":"NEWTABLE","16":"NOT","34":"CALLV1","39":"CALLMULTI","42":"CALL2VA","43":"CALL2","47":"CALLV1M","48":"CALL0M","51":"CONCAT","53":"SETUPVAL","55":"VARARG","57":"LOADK","61":"ADD","70":"SUB","73":"COPYVARARG","74":"TEST","79":"FORPREP","90":"CALLV0","93":"GETRET","101":"MUL","109":"GETTABLE","116":"SETTABLE","117":"METHODM","125":"LE","126":"MOD","130":"CALL2M","131":"CALL3","132":"CALL3M","138":"CALL0","141":"LT","142":"EQ","152":"CLOSURE","157":"GETUPVAL","170":"TESTNIL","178":"CALL3DISCARD","183":"UNM","186":"POW","198":"FORLOOP","201":"GETGLOBAL","206":"RETURNRANGE","210":"JMP","212":"VTOB","213":"DIV","220":"CALL1M","228":"CALL2DISCARD","248":"CALL0DISCARD"},
+    },
     v2: {
         read3: "m3", read4: "m3", seed: 617, mix1: 25, mix2: 70,
         opMul: 151, checksumConst: 736242,
@@ -436,8 +444,10 @@ if (modern) {
         fs.writeFileSync(path.join(args.out, "disasm.txt"), L.join("\n"));
 
         // ── 线性伪代码：每行一条语句，跳转用标签 ──
-        const constOf = (idx) => {
-            const ref = modern.r.constRefs?.[idx - 1];
+        // 每个函数原型有自己的常量表，所以 constOf 必须绑定到具体 proto，
+        // 否则子函数里的常量会全部退化成 K[n]（之前就是这个 bug）。
+        const constOfFor = (proto) => (idx) => {
+            const ref = proto.constRefs?.[idx - 1];
             if (ref === undefined) return "K[" + idx + "]";
             const sv = strById.get(String(ref));
             if (sv !== undefined) return "K[" + JSON.stringify(sv.length > 40 ? sv.slice(0, 40) + "…" : sv) + "]";
@@ -445,6 +455,7 @@ if (modern) {
             if (gv !== undefined) return gv;
             return "K[" + idx + "]";
         };
+        const constOf = constOfFor(modern.r);
         const P = [];
         P.push("; linear pseudocode — one statement per instruction, jumps as labels");
         P.push("; registers are rN (no names recovered); this is NOT a decompiler");
@@ -454,7 +465,7 @@ if (modern) {
         for (const p of allProtos) {
             P.push("");
             P.push(`;; ===== ${p.label} (depth ${p.depth}) =====`);
-            P.push(pseudocode(p, modern.name, constOf, names));
+            P.push(pseudocode(p, modern.name, constOfFor(p), names));
         }
         fs.writeFileSync(path.join(args.out, "pseudocode.txt"), P.join("\n"));
 
@@ -468,7 +479,7 @@ if (modern) {
         for (const p2 of allProtos) {
             S.push("");
             S.push(`;; ===== ${p2.label} (depth ${p2.depth}) =====`);
-            S.push(structured(p2, modern.name, constOf, names, TABLES[modern.name], makeDescriber(p2, modern.name, constOf, names)));
+            S.push(structured(p2, modern.name, constOfFor(p2), names, TABLES[modern.name], makeDescriber(p2, modern.name, constOfFor(p2), names)));
         }
         fs.writeFileSync(path.join(args.out, "structured.txt"), S.join("\n"));
     }
@@ -558,7 +569,8 @@ function parseProto(rd) {
     const shift = rd.u24();
 
     const key = [];
-    for (let i = 1; i <= KEY_LEN; i++) key[i] = bxor8(LCG[i], keyOff);
+    // keyOff 是 24 位数，必须整宽异或（8 位的 bxor8 会截断，导致操作数带固定大偏移）
+    for (let i = 1; i <= KEY_LEN; i++) key[i] = LCG[i] ^ keyOff;
 
     const ops = [];
     for (let i = 0; i < instrCount; i++) {
@@ -574,7 +586,8 @@ function parseProto(rd) {
         for (let i = 0; i < instrCount; i++) {
             const k = rd.buf[rd.p], x = rd.buf[rd.p + 1], a = rd.buf[rd.p + 2];
             rd.p += 3;
-            arr.push(bxor8(key[d], x * 65536 + k * 256 + a - D7));
+            // VM 是 xor(raw, key) - 0x800000：先异或 24 位数，再减偏移
+            arr.push(((x * 65536 + k * 256 + a) ^ key[d]) - D7);
             d += 3; if (d > KEY_LEN) d -= KEY_LEN;
         }
         return arr;
