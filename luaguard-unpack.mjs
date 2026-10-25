@@ -375,6 +375,24 @@ if (modern) {
     fs.writeFileSync(path.join(args.out, "strings.txt"),
         modern.strings.map((x) => (x.text === null ? `[${x.id}] <decrypt failed: ${x.error}>` : `[${x.id}] ${JSON.stringify(x.text)}`)).join("\n"));
     fs.writeFileSync(path.join(args.out, "globals.json"), JSON.stringify(modern.globals, null, 1));
+    // 递归解析所有子函数原型（每个 proto 是一段独立的字节码，没有 header）
+    function walkProtos(list, depth, prefix) {
+        const out = [];
+        for (let i = 0; i < list.length; i++) {
+            let p;
+            try { p = parseBlob(list[i], modern.cfg, { skipHeader: true }); } catch { continue; }
+            p.label = `${prefix}#${i}`;
+            p.depth = depth;
+            p.bytes = list[i].length;
+            out.push(p);
+            if (p.protos.length && depth < 6) out.push(...walkProtos(p.protos, depth + 1, `${p.label}.`));
+        }
+        return out;
+    }
+    const allProtos = walkProtos(modern.r.protos, 1, "chunk");
+    const goodProtos = allProtos.filter(p => p.ok);
+    log(`[5/5] child prototypes: ${allProtos.length} (${goodProtos.length} checksum OK), total instructions ${allProtos.reduce((a, p) => a + p.nums.instrCount, 0)}`);
+
     if (args.disasm) {
         const names = modern.cfg.opNames ?? {};
         const L = [];
@@ -382,19 +400,42 @@ if (modern) {
         L.push(`; layout ${modern.name} | blob ${blob.length} bytes | ${modern.strings.length} strings | main ${modern.r.nums.instrCount} instructions`);
         L.push(`; opcode names were matched against the v1 handler set and spot-checked against the v2 bodies`);
         L.push("");
-        const dumpArr = (arr, title) => {
+        // 常量池索引 → 具体值（资源字符串 / 全局数值），让每条 LOADK 都能直接读到内容
+        const strById = new Map(modern.strings.filter((s) => s.text !== null).map((s) => [s.id, s.text]));
+        const globalById = new Map(modern.globals.map((g) => [g.name, g.val]));
+        const annotate = (p, i, nm) => {
+            // 常量索引落在哪个操作数上因版本而异，三个位置都试，命中即止
+            if (nm !== "LOADK" && nm !== "GETGLOBAL") return "";
+            for (const ci of [p.code.c?.[i], p.code.a?.[i], p.code.b?.[i]]) {
+                if (ci === undefined) continue;
+                const ref = p.constRefs?.[ci - 1] ?? p.constRefs?.[ci];
+                if (ref === undefined) continue;
+                const sv = strById.get(String(ref));
+                if (sv !== undefined) return "   ; " + JSON.stringify(sv.length > 50 ? sv.slice(0, 50) + "…" : sv);
+                const gv = globalById.get(String(ref));
+                if (gv !== undefined) return "   ; " + gv;
+            }
+            return "";
+        };
+        const dumpArr = (arr, title, proto) => {
             if (!arr) return;
             L.push(`;${"─".repeat(74)}`);
             L.push(`; ${title}: ${arr.length} instructions`);
             for (let i = 0; i < arr.length; i++) {
-                const opName = names[arr[i]] ?? `OP_${arr[i]}`;
-                L.push(`  ${String(i).padStart(4, "0")}  ${opName.padEnd(14)} op=${String(arr[i]).padStart(4)}`);
+                const nm = names[arr[i]] ?? `OP_${arr[i]}`;
+                const A = proto.code.a?.[i], B = proto.code.b?.[i], C = proto.code.c?.[i];
+                const ops = `a=${String(A).padStart(4)} b=${String(B).padStart(4)} c=${String(C).padStart(4)}`;
+                L.push(`  ${String(i).padStart(4, "0")}  ${nm.padEnd(14)} ${ops}${annotate(proto, i, nm)}`);
             }
             L.push("");
         };
-        dumpArr(modern.r.code.op, "opcode stream");
+        dumpArr(modern.r.code.op, "main: opcode stream", modern.r);
+        for (const p of allProtos) {
+            L.push(`;${"─".repeat(74)}`);
+            L.push(`; ${p.label} (depth ${p.depth})  instr=${p.nums.instrCount} consts=${p.nums.constCount} upvals=${p.nums.upCount} bytes=${p.bytes} checksum=${p.ok ? "OK" : "FAIL"}`);
+            dumpArr(p.code.op, p.label, p);
+        }
         fs.writeFileSync(path.join(args.out, "disasm.txt"), L.join("\n"));
-        log(`[5/5] disassembly: ${modern.r.nums.instrCount} instructions`);
     }
 
     fs.writeFileSync(path.join(args.out, "structure.json"), JSON.stringify({
