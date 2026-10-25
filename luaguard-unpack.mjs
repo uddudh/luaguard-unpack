@@ -311,19 +311,14 @@ const MODERN_PROFILES = {
         phaseOrder: [{ key: "b", phase: 6 }, { key: "a", phase: 5 }, { key: "c", phase: 7 }, { key: "op" }],
         resOrder: ["cipher", "iv", "id", "tag"],
         // 人工精读 handler 后确定的语义（相似度对齐只能给参考，这里是核对过的）
-        opNames: {1:"GETUPVAL",2:"NOT",13:"SETTABLE",22:"SETNIL",26:"GETRET",29:"CLOSEUPS",
-            37:"GETGLOBAL",40:"MOVE",44:"CALL3",57:"CALL0",68:"VARARG",89:"CALL2DISCARD",
-            106:"CALL2M",108:"GETTABLE",111:"LOADK",115:"CLOSURE",121:"ARITH",124:"NEWTABLE",
-            130:"CALL3DISCARD",144:"CONCAT",147:"CALL0M",172:"SETUPVAL",179:"CALL2",184:"NOP",
-            189:"CALL0DISCARD",191:"CALL3M",203:"SUBI",215:"TEST",216:"ADDI",217:"JMP",
-            218:"CMP",233:"VTOB",250:"CALLMULTI"},
+        opNames: {"1":"GETUPVAL","2":"NOT","13":"SETTABLE","22":"SETNIL","26":"GETRET","29":"CLOSEUPS","31":"CMP","37":"GETGLOBAL","39":"ARITH","40":"MOVE","44":"CALL3","57":"CALL0","68":"VARARG","89":"CALL2DISCARD","92":"CMP","106":"CALL2M","108":"GETTABLE","111":"LOADK","115":"CLOSURE","121":"ARITH","124":"NEWTABLE","130":"CALL3DISCARD","144":"CONCAT","147":"CALL0M","172":"SETUPVAL","179":"CALL2","184":"NOP","189":"CALL0DISCARD","191":"CALL3M","203":"SUBI","215":"TEST","216":"ADDI","217":"JMP","218":"CMP","233":"VTOB","250":"CALLMULTI"},
     },
     v3: {
         read3: "odd", read4: "odd2", seed: 52, mix1: 31, mix2: 231,
         opMul: 97, checksumConst: 2608344,
         phaseOrder: [{ key: "b", phase: 6 }, { key: "op" }, { key: "c", phase: 7 }, { key: "a", phase: 5 }],
         resOrder: ["iv", "id", "tag", "cipher"],
-        opNames: {"2":"SETNIL","6":"CONCAT","7":"VTOB","28":"VARARG","30":"GETTABLE","33":"SETTABLE","42":"CLOSEUPS","60":"GETUPVAL","70":"CLOSURE","73":"NOP","107":"GETGLOBAL","118":"GETRET","119":"CALL3M","123":"CALL2M","141":"CALL2","143":"CALL0M","149":"ADDI","171":"SETUPVAL","178":"LOADK","185":"CALL0DISCARD","188":"MOVE","190":"CALL3DISCARD","198":"CALL3","203":"JMP","205":"ARITH","207":"TEST","210":"CMP","227":"CALL2DISCARD","231":"NOT","235":"NEWTABLE","238":"CALL0","248":"SUBI","254":"CALLMULTI"},
+        opNames: {"2":"SETNIL","6":"CONCAT","7":"VTOB","28":"VARARG","30":"GETTABLE","33":"SETTABLE","42":"CLOSEUPS","60":"GETUPVAL","67":"ARITH","70":"CLOSURE","73":"NOP","95":"CMP","107":"GETGLOBAL","118":"GETRET","119":"CALL3M","123":"CALL2M","141":"CALL2","143":"CALL0M","149":"ADDI","171":"SETUPVAL","173":"CMP","178":"LOADK","185":"CALL0DISCARD","188":"MOVE","190":"CALL3DISCARD","198":"CALL3","203":"JMP","205":"ARITH","207":"TEST","210":"CMP","227":"CALL2DISCARD","231":"NOT","235":"NEWTABLE","238":"CALL0","248":"SUBI","254":"CALLMULTI"},
     },
 };
 
@@ -453,11 +448,11 @@ if (modern) {
         P.push("; registers are rN (no names recovered); this is NOT a decompiler");
         P.push("");
         P.push(";; ===== main =====");
-        P.push(pseudocode(modern.r, modern.name, constOf));
+        P.push(pseudocode(modern.r, modern.name, constOf, names));
         for (const p of allProtos) {
             P.push("");
             P.push(`;; ===== ${p.label} (depth ${p.depth}) =====`);
-            P.push(pseudocode(p, modern.name, constOf));
+            P.push(pseudocode(p, modern.name, constOf, names));
         }
         fs.writeFileSync(path.join(args.out, "pseudocode.txt"), P.join("\n"));
     }
