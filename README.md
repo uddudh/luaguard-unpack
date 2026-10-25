@@ -21,7 +21,7 @@ node luaguard-unpack.mjs --url https://example.com/protected.lua -o unpacked
 | `blob.bin` | the concatenated + decoded packed binary |
 | `strings.json` / `strings.txt` | the encrypted string table, **fully decrypted** |
 | `globals.json` | numeric constants from the global table |
-| `disasm.txt` | every function prototype, disassembled with named opcodes |
+| `disasm.txt` | **every** function prototype (main + all nested children), disassembled with named opcodes, operands, and constant values inlined as comments |
 | `structure.json` | everything above, machine-readable, plus a verification verdict |
 
 ## Why you can trust the output
@@ -129,6 +129,21 @@ Example (v3):
   0008  CALL2DISCARD   op= 227
   0011  NOT            op= 231
 ```
+
+### What the disassembly looks like
+
+Every `LOADK` / `GETGLOBAL` carries the decoded constant as a trailing comment, and all operands
+are shown, so the instruction stream is readable without a decompiler:
+
+```
+  0003  LOADK          a=  40 b=   0 c=  31   ; "Invalid key"
+  0008  LOADK          a=  33 b=   0 c=  16   ; "getgenv"
+  0009  GETTABLE       a=  32 b=  31 c=  33
+  0018  LOADK          a=   0 b=   5 c=  18   ; "RbxAnalyticsService"
+```
+
+Nested prototypes are walked recursively (`chunk#0.#2.#1 (depth 3) …`), each with its own
+checksum status, so no code is left unexamined.
 
 ## How the format works
 
