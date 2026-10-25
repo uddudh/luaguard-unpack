@@ -40,19 +40,20 @@ export function lcg(seed, m1, m2, len = 32) {
  *   seed, mix1, mix2, opMul, checksumConst
  *   phaseOrder: [{key:"b",phase:6},{key:"a",phase:5},{key:"c",phase:7},{key:"op"}]
  */
-export function parseBlob(blob, cfg) {
+export function parseBlob(blob, cfg, opts = {}) {
     const R3 = READERS[cfg.read3 ?? cfg.read], R4 = READERS4[cfg.read4 ?? cfg.read];
     let p = 0;
     const M3 = () => { if (p + 3 > blob.length) throw new Error("EOF@" + p); const v = R3(blob, p); p += 3; return v; };
     const M4 = () => { if (p + 4 > blob.length) throw new Error("EOF@" + p); const v = R4(blob, p); p += 4; return v; };
     const STR = () => { const n = M4(); if (p + n > blob.length) throw new Error("EOF-str"); const s = blob.subarray(p, p + n); p += n; return s; };
 
-    const header = {};                       // 5 个字段，名字因版本而异，只关心它们是数组索引键
-    for (let i = 0; i < 5; i++) M3();
+    // 只有主 blob 有 5 个 header 字段；子原型直接从 numParams 开始
+    if (!opts.skipHeader) for (let i = 0; i < 5; i++) M3();
 
     const numParams = M3(), startState = M3();
     const constCount = M3();
-    for (let i = 0; i < constCount; i++) M3();
+    const constRefs = [];
+    for (let i = 0; i < constCount; i++) constRefs.push(M3());
     const instrCount = M3();
     const keyOff = M3() + IA, shift = M3();
     const key = lcg(cfg.seed, cfg.mix1, cfg.mix2);
@@ -89,6 +90,7 @@ export function parseBlob(blob, cfg) {
 
     return {
         nums: { numParams, startState, constCount, instrCount, upCount, protoCount },
+        constRefs,
         code, protos, checksum, expect, ok: checksum === expect, end: p,
         readGlobals: (n) => { const out = []; for (let i = 0; i < n; i++) { out.push({ name: STR().toString("latin1"), type: STR().toString("latin1"), val: STR().toString("latin1") }); } return out; },
         readResources: (n, order) => {
