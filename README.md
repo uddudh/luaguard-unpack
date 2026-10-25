@@ -22,7 +22,8 @@ node luaguard-unpack.mjs --url https://example.com/protected.lua -o unpacked
 | `strings.json` / `strings.txt` | the encrypted string table, **fully decrypted** |
 | `globals.json` | numeric constants from the global table |
 | `disasm.txt` | **every** function prototype (main + all nested children), disassembled with named opcodes, operands, and constant values inlined as comments |
-| `pseudocode.txt` | **linear pseudocode** for v2/v3: one Lua-like statement per instruction, jumps as labels |
+| `pseudocode.txt` | **linear pseudocode** for v2/v3: one statement per instruction |
+| `structured.txt` | **conditional jumps folded into `if`** (TEST/CMP + JMP pairs merged) |
 | `structure.json` | everything above, machine-readable, plus a verification verdict |
 
 ## Why you can trust the output
@@ -143,7 +144,15 @@ are shown, so the instruction stream is readable without a decompiler:
   0018  LOADK          a=   0 b=   5 c=  18   ; "RbxAnalyticsService"
 ```
 
-For v2/v3 there is also `pseudocode.txt`, which renders the same instructions as statements:
+For v2/v3 there are two readable renderings. `structured.txt` folds the VM's "test + jump" pairs
+into real `if` statements:
+
+```lua
+L0012:
+  if not (r26) then goto L0034 end
+```
+
+`pseudocode.txt` keeps it flat, one statement per instruction:
 
 ```lua
 L0003:
