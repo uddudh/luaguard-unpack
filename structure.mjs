@@ -42,30 +42,60 @@ export function structured(proto, version, constOf, opNames, tpl, describe) {
     const lines = [];
     const label = (i) => `L${String(i).padStart(4, "0")}`;
 
-    // 先收集所有跳转目标，用来判断哪些位置需要标签
+    // 跳转目标：无条件跳转 + 条件跳转（TEST/CMP 后紧跟的 JMP）
     const targets = new Set();
+    const loopHeads = new Map();   // 目标 → 回边来源列表
+    const backEdges = new Set();   // 回边所在位置
+    // pc 是 1-based，转成 0-based 索引
+    const jmpTargetOf = (i) => (version === "v3" ? c[i] - 1 : a[i] - 1);
+
+    const isJmp = (i) => opNames?.[op[i]] === "JMP";
+    // 目标若是另一条 JMP，沿链解析到真正的落点（防止 goto 指向被折叠掉的位置）
+    const resolve = (t, depth = 0) => {
+        if (depth > 16 || t < 0 || t >= n) return t;
+        return isJmp(t) ? resolve(jmpTargetOf(t), depth + 1) : t;
+    };
+
     for (let i = 0; i < n; i++) {
         const nm = opNames?.[op[i]];
-        if (nm === "JMP") targets.add(a[i]);            // v2 JMP 目标在 a；v3 在 c，下面兜底
-        if (nm === "JMP") targets.add(c[i]);
+        if (nm !== "JMP") continue;
+        const t = resolve(jmpTargetOf(i));
+        targets.add(t);
+        // 目标在当前指令之前 → 这是回边，说明存在循环
+        if (t <= i) {
+            backEdges.add(i);
+            if (!loopHeads.has(t)) loopHeads.set(t, []);
+            loopHeads.get(t).push(i);
+        }
     }
 
     let i = 0;
     while (i < n) {
-        if (targets.has(i) || i === 0) lines.push(`${label(i)}:`);
+        if (targets.has(i) || i === 0) {
+            const heads = loopHeads.get(i);
+            lines.push(`${label(i)}:${heads ? `   -- 推测是循环头（回边来自 ${heads.map(label).join(", ")}，未做支配树验证）` : ""}`);
+        }
         const nm = opNames?.[op[i]];
 
         // TEST / CMP + 紧跟的 JMP → 一条 if
         if ((nm === "TEST" || nm === "CMP") && i + 1 < n && opNames?.[op[i + 1]] === "JMP") {
             const condExpr = cond[nm] ? cond[nm](a[i], b[i], c[i]) : null;
             // 下一条 JMP 的目标：v2 在 a 字段，v3 在 c 字段
-            const jmpTarget = opNames ? (version === "v3" ? c[i + 1] : a[i + 1]) : a[i + 1];
+            const jmpTarget = resolve(jmpTargetOf(i + 1));
             if (condExpr) {
                 const note = describe ? describe(i) : "";
-                lines.push(`  if not (${condExpr}) then goto ${label(jmpTarget)} end${note ? "   ; " + note : ""}`);
+                const back = backEdges.has(i + 1) ? "   -- 推测是回边（未验证）" : "";
+                lines.push(`  if not (${condExpr}) then goto ${label(jmpTarget)} end${back}${note ? "   ; " + note : ""}`);
                 i += 2;
                 continue;
             }
+        }
+
+        // 无条件跳转单独处理：目标要经过跳转链折叠，否则可能指向被 if 折叠掉的位置
+        if (nm === "JMP") {
+            lines.push(`  goto ${label(resolve(jmpTargetOf(i)))}`);
+            i += 1;
+            continue;
         }
 
         // 普通指令：套用已有模板
