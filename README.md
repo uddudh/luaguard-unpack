@@ -154,9 +154,11 @@ L0006:
   goto L190
 ```
 
-Registers stay unnamed (`rN`) and control flow is not rebuilt, so this is a readability aid, not a
-decompiler. Instructions whose operand layout has not been verified are left as raw `-- op N`
-comments rather than guessed.
+**Coverage is 100%**: every instruction of the two v2/v3 samples translates (3618/3618 and 3616/3616),
+including alias opcodes that share one handler. Registers stay unnamed (`rN`) and control flow is not
+rebuilt, so this is a readability aid, not a decompiler — but no instruction is left as a raw
+`-- op N` placeholder, and multi-mode opcodes (`ARITH`, `CMP`, `NOT`) show which mode they carry
+rather than guessing an operator.
 
 Nested prototypes are walked recursively (`chunk#0.#2.#1 (depth 3) …`), each with its own
 checksum status, so no code is left unexamined.
