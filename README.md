@@ -108,6 +108,28 @@ $ node luaguard-unpack.mjs --url https://lua-guard.xyz/api/raw/1899... -o out
 done - fully verified (v3)
 ```
 
+### Opcode semantics
+
+Each version has its own opcode numbering, so the names are stored per profile and applied when
+disassembling. They were obtained by reading every handler body, not guessed from similarity
+(similarity matching gets `T = not X` and `R[a][b] = c` wrong, so the final tables are hand-checked).
+
+| Version | handler table | opcodes named |
+|---|---|---|
+| v1 | `Y7[hash]` | 50 |
+| v2 | `QH[hash]` | 33 |
+| v3 | `Vl[hash]` | 33 |
+
+Example (v3):
+
+```
+  0005  LOADK          op= 178
+  0006  GETTABLE       op=  30
+  0007  CLOSURE        op=  70
+  0008  CALL2DISCARD   op= 227
+  0011  NOT            op= 231
+```
+
 ## How the format works
 
 The file is three layers:
