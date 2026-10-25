@@ -72,7 +72,7 @@ for (const s of SAMPLES) {
     let out = "", code = 0;
     try { out = execFileSync(process.execPath, [CLI, junk, "-o", junk + ".d"], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }); }
     catch (e) { out = `${e.stdout ?? ""}${e.stderr ?? ""}`; code = e.status ?? 1; }
-    check("非目标文件 → 明确报错", code !== 0 && /does not look like|no base64/.test(out), out.split("\n")[0]?.slice(0, 60));
+    check("非目标文件 → 明确报错", code !== 0 && /does not look like|no base64|unrecognised protection/.test(out), out.split("\n")[0]?.slice(0, 60));
 }
 
 console.log("\n" + "=".repeat(70));

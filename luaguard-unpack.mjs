@@ -28,6 +28,7 @@ import { structured } from "./structure.mjs";
 import { makeDescriber } from "./regnames.mjs";
 import { foldExpressions, cleanup } from "./fold.mjs";
 import { detect } from "./detect.mjs";
+import { detectEscaped, decodeEscaped } from "./escaped.mjs";
 import { renameRegisters } from "./rename.mjs";
 
 const D7 = 0x800000; // signed 24-bit bias used all over the loader
@@ -218,6 +219,32 @@ if (args.url) {
     if (!raw.length) die("downloaded file is empty");
 } else {
     raw = fs.readFileSync(args.input, "latin1");
+}
+
+// ── 防护识别 ──
+{
+    const d = detect(raw);
+    const best = d.hits[0];
+    if (!best) {
+        console.error("\x1b[31merror:\x1b[0m unrecognised protection — no known fingerprint matched.");
+        console.error("  诊断: 长 base64 段 " + d.stats.longBase64Count + " | 数字转义 " + d.stats.numericEscapes +
+                      " | elseif " + d.stats.elseifCount + " | loadstring " + d.stats.hasLoadstring);
+        console.error("  这个格式目前不支持。");
+        process.exit(2);
+    }
+    // 「转义明文」：解出来就是原始 Lua，直接输出，不需要 VM 反汇编
+    if (best.name.includes("转义明文")) {
+        const esc = detectEscaped(raw);
+        if (esc) {
+            const decoded = decodeEscaped(esc.body);
+            fs.mkdirSync(args.out, { recursive: true });
+            fs.writeFileSync(path.join(args.out, "source.lua"), decoded);
+            const lines = decoded.split("\n").length;
+            console.log("\x1b[32mdone — escaped plaintext decoded\x1b[0m → " + args.out + "/source.lua");
+            console.log(`  ${decoded.length} 字节, ${lines} 行（这是完整原始 Lua 源码）`);
+            process.exit(0);
+        }
+    }
 }
 
 const outer = decryptOuterLayer(raw);

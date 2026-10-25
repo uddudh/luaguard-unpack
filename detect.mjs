@@ -43,6 +43,14 @@ const FINGERPRINTS = [
         },
     },
     {
+        name: "转义明文（\\ddd 编码）",
+        check(ctx) {
+            const m = ctx.src.match(/"((?:\\\d{1,3}){200,})"/);
+            if (m) return { score: 88, note: `含 ${Math.floor(m[1].length/4)} 个 \\ddd 转义（解码即明文 Lua）` };
+            return null;
+        },
+    },
+    {
         name: "朴素 base64 / XOR",
         check(ctx) {
             const b64 = ctx.longBase64;
