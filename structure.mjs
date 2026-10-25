@@ -35,7 +35,7 @@ const COND = {
     },
 };
 
-export function structured(proto, version, constOf, opNames, tpl) {
+export function structured(proto, version, constOf, opNames, tpl, describe) {
     const { a, b, c, op } = proto.code;
     const n = op.length;
     const cond = COND[version] ?? {};
@@ -61,7 +61,8 @@ export function structured(proto, version, constOf, opNames, tpl) {
             // 下一条 JMP 的目标：v2 在 a 字段，v3 在 c 字段
             const jmpTarget = opNames ? (version === "v3" ? c[i + 1] : a[i + 1]) : a[i + 1];
             if (condExpr) {
-                lines.push(`  if not (${condExpr}) then goto ${label(jmpTarget)} end`);
+                const note = describe ? describe(i) : "";
+                lines.push(`  if not (${condExpr}) then goto ${label(jmpTarget)} end${note ? "   ; " + note : ""}`);
                 i += 2;
                 continue;
             }
@@ -69,7 +70,9 @@ export function structured(proto, version, constOf, opNames, tpl) {
 
         // 普通指令：套用已有模板
         const t = tpl?.[nm];
-        lines.push(t ? `  ${t(a[i], b[i], c[i], constOf)}` : `  -- op ${op[i]}  a=${a[i]} b=${b[i]} c=${c[i]}`);
+        const note = describe ? describe(i) : "";
+        const stmt = t ? t(a[i], b[i], c[i], constOf) : `-- op ${op[i]}  a=${a[i]} b=${b[i]} c=${c[i]}`;
+        lines.push(`  ${stmt}${note && !stmt.includes(note) ? "   ; " + note : ""}`);
         i += 1;
     }
     lines.push(`${label(n)}:`);
