@@ -23,7 +23,8 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 import { parseBlob } from "./parser.mjs";
-import { pseudocode } from "./pseudo.mjs";
+import { pseudocode, TABLES } from "./pseudo.mjs";
+import { structured } from "./structure.mjs";
 
 const D7 = 0x800000; // signed 24-bit bias used all over the loader
 const KEY_LEN = 32;  // loader's LCG key length
@@ -455,6 +456,20 @@ if (modern) {
             P.push(pseudocode(p, modern.name, constOf, names));
         }
         fs.writeFileSync(path.join(args.out, "pseudocode.txt"), P.join("\n"));
+
+        // ── 结构化：TEST/CMP + JMP 合并成 if ──
+        const S = [];
+        S.push("; structured view — conditional jumps are folded into if statements");
+        S.push("; labels mark jump targets; still no variable names or loop reconstruction");
+        S.push("");
+        S.push(";; ===== main =====");
+        S.push(structured(modern.r, modern.name, constOf, names, TABLES[modern.name]));
+        for (const p2 of allProtos) {
+            S.push("");
+            S.push(`;; ===== ${p2.label} (depth ${p2.depth}) =====`);
+            S.push(structured(p2, modern.name, constOf, names, TABLES[modern.name]));
+        }
+        fs.writeFileSync(path.join(args.out, "structured.txt"), S.join("\n"));
     }
 
     fs.writeFileSync(path.join(args.out, "structure.json"), JSON.stringify({
