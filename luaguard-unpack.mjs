@@ -22,6 +22,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
+import { parseBlob } from "./parser.mjs";
 
 const D7 = 0x800000; // signed 24-bit bias used all over the loader
 const KEY_LEN = 32;  // loader's LCG key length
@@ -30,10 +31,11 @@ const BASE64_RE = /^[A-Za-z0-9+/=]+$/;
 
 // ── CLI ────────────────────────────────────────────────────────────────────────
 function parseArgs(argv) {
-    const args = { input: null, out: "unpacked", verify: false, quiet: false, disasm: true };
+    const args = { input: null, url: null, out: "unpacked", verify: false, quiet: false, disasm: true };
     for (let i = 0; i < argv.length; i++) {
         const a = argv[i];
         if (a === "-o" || a === "--out") args.out = argv[++i];
+        else if (a === "-u" || a === "--url") args.url = argv[++i];
         else if (a === "--verify") args.verify = true;
         else if (a === "--quiet") args.quiet = true;
         else if (a === "--no-disasm") args.disasm = false;
@@ -47,9 +49,11 @@ function printHelp() {
 
 Usage:
   luaguard-unpack <protected.lua> [options]
+  luaguard-unpack --url <https://...> [options]
 
 Options:
   -o, --out <dir>   output directory (default: ./unpacked)
+  -u, --url <url>   download the protected script from a URL (no local file needed)
   --verify          only validate the payload (HMAC + checksums), write nothing
   --no-disasm       skip disassembly (much faster on huge payloads)
   --quiet           only print errors and the final verdict
@@ -61,8 +65,8 @@ const log = (...m) => { if (!args.quiet) console.log(...m); };
 const warn = (...m) => console.warn(...m);
 const die = (msg, code = 1) => { console.error(`\x1b[31merror:\x1b[0m ${msg}`); process.exit(code); };
 
-if (!args.input) { printHelp(); process.exit(1); }
-if (!fs.existsSync(args.input)) die(`input not found: ${args.input}`);
+if (!args.input && !args.url) { printHelp(); process.exit(1); }
+if (args.input && !fs.existsSync(args.input)) die(`input not found: ${args.input}`);
 
 // ── Lua lexer: collect every string literal ────────────────────────────────────
 function luaStringLiterals(src) {
@@ -123,8 +127,99 @@ function luaStringLiterals(src) {
     return out;
 }
 
+// ── Step 0: unwrap the outer encryption layer, if present ───────────────────────
+/**
+ * Lua-Guard produces two kinds of files:
+ *
+ *   A) the protected script — a table of base64 chunks plus a self-contained
+ *      decryptor written in plain Lua (hand-rolled SHA256, base64 and a byte-wise
+ *      XOR). Its runtime is: key = sha256(salt .. ':' .. scriptId .. ':runtime'),
+ *      plaintext = XOR(base64decode(concat(chunks in `order`)), key)
+ *
+ *   B) the plain payload — what this tool already understood.
+ *
+ * Handling A here means the user never has to boot Roblox or an executor to get
+ * at the payload: point the tool at the protected file directly.
+ *
+ * The chunk table always contains decoy entries: only `order.length` of them are
+ * used, and they are picked in the order given by that permutation array. Skipping
+ * either detail yields garbage, which is exactly what makes this layer annoying.
+ */
+function decryptOuterLayer(src) {
+    const tbl = src.match(/local\s+t[0-9a-f]{6,}\s*=\s*\{([\s\S]*?)\}\s*local/);
+    if (!tbl) return null;
+
+    const parts = [...tbl[1].matchAll(/'([^']*)'/g)].map((m) => m[1]);
+    if (parts.length < 16) return null;
+
+    // A permutation of 1..N that selects/orders the real chunks (decoys stay unused).
+    let order = null;
+    for (const m of src.matchAll(/=\s*\{((?:\s*\d+\s*,){64,}[^}]*)\}/g)) {
+        const nums = (m[1].match(/\d+/g) || []).map(Number);
+        const sorted = [...nums].sort((a, b) => a - b);
+        if (sorted[0] === 1 && sorted[sorted.length - 1] === nums.length && nums.length >= parts.length * 0.9) {
+            order = nums;
+            break;
+        }
+    }
+    if (!order) return null;
+
+    const salt = (src.match(/local\s+[a-z0-9_]+\s*=\s*'([0-9a-f]{16})'/i) || [])[1];
+    const scriptId = (src.match(/\.\.\s*'([0-9a-f]{16,})[^']*:runtime'/i) || [])[1];
+    if (!salt || !scriptId) return null;
+
+    // Chunks are pulled by permutation (Lua arrays are 1-based), then the result is
+    // squeezed through the base64 filter which also drops inserted junk characters.
+    const joined = order.map((i) => parts[i - 1] ?? "").join("");
+    const clean = joined.replace(/[^A-Za-z0-9+/=]/g, "");
+
+    let ct;
+    try { ct = Buffer.from(clean, "base64"); } catch { return null; }
+    if (!ct.length) return null;
+
+    // key = sha256(salt ":" scriptId ":runtime") — taken verbatim from the decryptor.
+    const key = crypto.createHash("sha256").update(`${salt}:${scriptId}:runtime`).digest();
+
+    const out = Buffer.alloc(ct.length);
+    for (let i = 0; i < ct.length; i++) out[i] = ct[i] ^ key[i % key.length];
+
+    // Only accept the result if it actually looks like the payload we understand.
+    const text = out.toString("latin1");
+    if (!/table\.concat|local\s+C\s*=|Lua-Guard|LG-/i.test(text.slice(0, 4000))) return null;
+
+    return {
+        plain: text,
+        salt, scriptId,
+        chunks: parts.length,
+        used: order.length,
+        decoys: parts.length - order.length,
+        bytes: out.length,
+    };
+}
+
 // ── Step 1: locate payload segments ────────────────────────────────────────────
-const raw = fs.readFileSync(args.input, "latin1");
+let raw;
+if (args.url) {
+    log(`[0/5] downloading ${args.url}`);
+    let res;
+    try {
+        res = await fetch(args.url, { signal: AbortSignal.timeout(60000), redirect: "follow" });
+    } catch (e) {
+        die(`download failed: ${e.message}`);
+    }
+    if (!res.ok) die(`download failed: HTTP ${res.status}`);
+    raw = await res.text();
+    if (!raw.length) die("downloaded file is empty");
+} else {
+    raw = fs.readFileSync(args.input, "latin1");
+}
+
+const outer = decryptOuterLayer(raw);
+if (outer) {
+    log(`[0/5] outer encryption unwrapped: ${outer.chunks} chunks ` +
+        `(${outer.used} used, ${outer.decoys} decoys) → ${outer.bytes} bytes plaintext`);
+    raw = outer.plain;
+}
 const literals = luaStringLiterals(raw);
 const segments = literals
     .filter((l) => l.raw.length >= MIN_SEG_LEN && BASE64_RE.test(l.raw))
@@ -202,8 +297,106 @@ if (digests.length === 0) {
 log(`[2/5] salt ${hmacOk ? "verified" : "guessed (no matching digest in file)"}: ${salt.slice(0, 12)}… (${salt.length} chars)`);
 if (!hmacOk) warn("       warning: global HMAC did not match any embedded digest. Parsing continues, but treat results as unverified.");
 
+// ── Step 3a: newer blob layouts (v2 / v3) ─────────────────────────────────────
+// Lua-Guard changes the whole parameter set between versions: the LCG seed and mixer,
+// the 3- and 4-byte field orders, the opcode multiplier, the checksum constant, the
+// order of the four instruction arrays and the field order of the string table.
+// Rather than hardcode one, we try each known profile and accept the first whose
+// checksum passes AND which consumes the blob to the last byte.
+const MODERN_PROFILES = {
+    v2: {
+        read3: "m3", read4: "m3", seed: 617, mix1: 25, mix2: 70,
+        opMul: 151, checksumConst: 736242,
+        phaseOrder: [{ key: "b", phase: 6 }, { key: "a", phase: 5 }, { key: "c", phase: 7 }, { key: "op" }],
+        resOrder: ["cipher", "iv", "id", "tag"],
+    },
+    v3: {
+        read3: "odd", read4: "odd2", seed: 52, mix1: 31, mix2: 231,
+        opMul: 97, checksumConst: 2608344,
+        phaseOrder: [{ key: "b", phase: 6 }, { key: "op" }, { key: "c", phase: 7 }, { key: "a", phase: 5 }],
+        resOrder: ["iv", "id", "tag", "cipher"],
+    },
+};
+
+function tryModern() {
+    for (const [name, cfg] of Object.entries(MODERN_PROFILES)) {
+        let r;
+        try { r = parseBlob(blob, cfg); } catch { continue; }
+        if (!r.ok) continue;
+        try {
+            const gCount = r.count();
+            const globals = r.readGlobals(gCount);
+            const rCount = r.count();
+            const resources = r.readResources(rCount, cfg.resOrder);
+            if (r.pos() !== blob.length) continue;   // must consume exactly
+
+            const strings = [];
+            let failed = 0;
+            for (const res of resources) {
+                try {
+                    const key = Buffer.from(sha256hex(`${salt}:enc:${res.id}`), "hex");
+                    const dec = crypto.createDecipheriv("aes-256-cbc", key, Buffer.from(res.iv, "base64"));
+                    const pt = Buffer.concat([dec.update(Buffer.from(res.cipher, "base64")), dec.final()]);
+                    strings.push({ id: res.id, text: pt.toString("latin1") });
+                } catch (e) { failed++; strings.push({ id: res.id, text: null, error: e.message }); }
+            }
+            return { name, cfg, r, globals, resources, strings, failed };
+        } catch { continue; }
+    }
+    return null;
+}
+
+const modern = tryModern();
+if (modern) {
+    log(`[3/5] layout: ${modern.name} (checksum ${modern.r.checksum} OK, ${modern.r.pos()}/${blob.length} bytes)`);
+    log(`      globals ${modern.globals.length} | strings ${modern.strings.length} | main instr ${modern.r.nums.instrCount} | protos ${modern.r.nums.protoCount}`);
+    log(`[4/5] strings: ${modern.strings.length - modern.failed}/${modern.strings.length} decrypted`);
+
+    if (args.verify) {
+        const ok = modern.failed === 0;
+        console.log("");
+        console.log(ok ? "\x1b[32mverify: fully verified\x1b[0m (checksum + exact byte consumption + all strings)"
+                      : `\x1b[33mverify: incomplete\x1b[0m strings=${modern.strings.length - modern.failed}/${modern.strings.length}`);
+        process.exit(ok ? 0 : 3);
+    }
+
+    fs.mkdirSync(args.out, { recursive: true });
+    kept.forEach((seg, i) => fs.writeFileSync(path.join(args.out, `seg${String(i + 1).padStart(2, "0")}.b64`), seg.raw));
+    fs.writeFileSync(path.join(args.out, "blob.bin"), blob);
+    fs.writeFileSync(path.join(args.out, "strings.json"), JSON.stringify(modern.strings, null, 1));
+    fs.writeFileSync(path.join(args.out, "strings.txt"),
+        modern.strings.map((x) => (x.text === null ? `[${x.id}] <decrypt failed: ${x.error}>` : `[${x.id}] ${JSON.stringify(x.text)}`)).join("\n"));
+    fs.writeFileSync(path.join(args.out, "globals.json"), JSON.stringify(modern.globals, null, 1));
+    fs.writeFileSync(path.join(args.out, "structure.json"), JSON.stringify({
+        source: args.url ?? args.input,
+        layout: modern.name,
+        salt, saltVerified: hmacOk,
+        blobBytes: blob.length,
+        numbers: modern.r.nums,
+        checksum: { got: modern.r.checksum, expected: modern.r.expect },
+        globals: modern.globals,
+        resources: modern.resources,
+        strings: modern.strings,
+        codeArrays: Object.keys(modern.r.code),
+        childProtos: modern.r.protos.length,
+    }, null, 1));
+
+    console.log("");
+    console.log(modern.failed === 0
+        ? `\x1b[32mdone — fully verified (${modern.name})\x1b[0m → ${args.out}/`
+        : `\x1b[33mdone with warnings (${modern.name})\x1b[0m → ${args.out}/`);
+    process.exit(modern.failed === 0 ? 0 : 3);
+}
+
 // ── Step 3: re-implement the loader's field encoding ───────────────────────────
 function bxor8(a, b) {
+    // Operand values are signed 24-bit and the VM feeds them straight into a naive
+    // bit-by-bit XOR whose modulo is always non-negative (Lua semantics). JavaScript's
+    // % returns a negative remainder, so the same code here computes the wrong bits.
+    // Normalising to 0..255 first reproduces the low-8-bit two's complement XOR.
+    // Without this, every instruction with a negative operand decodes to garbage.
+    a = ((a % 256) + 256) % 256;
+    b = ((b % 256) + 256) % 256;
     let r = 0, t = 1;
     for (let k = 0; k < 8; k++) {
         const ba = a % 2, bb = b % 2;
@@ -440,7 +633,7 @@ if (args.disasm) {
         return null;
     };
     const lines = [];
-    lines.push(`; disassembly of ${args.input}`);
+    lines.push(`; disassembly of ${args.url ?? args.input}`);
     lines.push(`; blob ${blob.length} bytes | ${globals.length} globals | ${strings.length} strings | ${protos.length} prototypes | ${totalInstr} instructions`);
     lines.push(`; bytecode is a custom register VM; opcode names were read from the VM's own handlers`);
     lines.push("");
