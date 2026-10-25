@@ -23,7 +23,7 @@ node luaguard-unpack.mjs --url https://example.com/protected.lua -o unpacked
 | `globals.json` | numeric constants from the global table |
 | `disasm.txt` | **every** function prototype (main + all nested children), disassembled with named opcodes, operands, and constant values inlined as comments |
 | `pseudocode.txt` | **linear pseudocode** for v2/v3: one statement per instruction |
-| `structured.txt` | **conditional jumps folded into `if`** (TEST/CMP + JMP pairs merged) |
+| `structured.txt` | **conditional jumps folded into `if`**, plus register provenance comments (TEST/CMP + JMP pairs merged) |
 | `structure.json` | everything above, machine-readable, plus a verification verdict |
 
 ## Why you can trust the output
