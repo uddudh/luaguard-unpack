@@ -309,12 +309,20 @@ const MODERN_PROFILES = {
         opMul: 151, checksumConst: 736242,
         phaseOrder: [{ key: "b", phase: 6 }, { key: "a", phase: 5 }, { key: "c", phase: 7 }, { key: "op" }],
         resOrder: ["cipher", "iv", "id", "tag"],
+        // 人工精读 handler 后确定的语义（相似度对齐只能给参考，这里是核对过的）
+        opNames: {1:"GETUPVAL",2:"NOT",13:"SETTABLE",22:"SETNIL",26:"GETRET",29:"CLOSEUPS",
+            37:"GETGLOBAL",40:"MOVE",44:"CALL3",57:"CALL0",68:"VARARG",89:"CALL2DISCARD",
+            106:"CALL2M",108:"GETTABLE",111:"LOADK",115:"CLOSURE",121:"ARITH",124:"NEWTABLE",
+            130:"CALL3DISCARD",144:"CONCAT",147:"CALL0M",172:"SETUPVAL",179:"CALL2",184:"NOP",
+            189:"CALL0DISCARD",191:"CALL3M",203:"SUBI",215:"TEST",216:"ADDI",217:"JMP",
+            218:"CMP",233:"VTOB",250:"CALLMULTI"},
     },
     v3: {
         read3: "odd", read4: "odd2", seed: 52, mix1: 31, mix2: 231,
         opMul: 97, checksumConst: 2608344,
         phaseOrder: [{ key: "b", phase: 6 }, { key: "op" }, { key: "c", phase: 7 }, { key: "a", phase: 5 }],
         resOrder: ["iv", "id", "tag", "cipher"],
+        opNames: {"2":"SETNIL","6":"CONCAT","7":"VTOB","28":"VARARG","30":"GETTABLE","33":"SETTABLE","42":"CLOSEUPS","60":"GETUPVAL","70":"CLOSURE","73":"NOP","107":"GETGLOBAL","118":"GETRET","119":"CALL3M","123":"CALL2M","141":"CALL2","143":"CALL0M","149":"ADDI","171":"SETUPVAL","178":"LOADK","185":"CALL0DISCARD","188":"MOVE","190":"CALL3DISCARD","198":"CALL3","203":"JMP","205":"ARITH","207":"TEST","210":"CMP","227":"CALL2DISCARD","231":"NOT","235":"NEWTABLE","238":"CALL0","248":"SUBI","254":"CALLMULTI"},
     },
 };
 
@@ -367,6 +375,28 @@ if (modern) {
     fs.writeFileSync(path.join(args.out, "strings.txt"),
         modern.strings.map((x) => (x.text === null ? `[${x.id}] <decrypt failed: ${x.error}>` : `[${x.id}] ${JSON.stringify(x.text)}`)).join("\n"));
     fs.writeFileSync(path.join(args.out, "globals.json"), JSON.stringify(modern.globals, null, 1));
+    if (args.disasm) {
+        const names = modern.cfg.opNames ?? {};
+        const L = [];
+        L.push(`; disassembly of ${args.url ?? args.input}`);
+        L.push(`; layout ${modern.name} | blob ${blob.length} bytes | ${modern.strings.length} strings | main ${modern.r.nums.instrCount} instructions`);
+        L.push(`; opcode names were matched against the v1 handler set and spot-checked against the v2 bodies`);
+        L.push("");
+        const dumpArr = (arr, title) => {
+            if (!arr) return;
+            L.push(`;${"─".repeat(74)}`);
+            L.push(`; ${title}: ${arr.length} instructions`);
+            for (let i = 0; i < arr.length; i++) {
+                const opName = names[arr[i]] ?? `OP_${arr[i]}`;
+                L.push(`  ${String(i).padStart(4, "0")}  ${opName.padEnd(14)} op=${String(arr[i]).padStart(4)}`);
+            }
+            L.push("");
+        };
+        dumpArr(modern.r.code.op, "opcode stream");
+        fs.writeFileSync(path.join(args.out, "disasm.txt"), L.join("\n"));
+        log(`[5/5] disassembly: ${modern.r.nums.instrCount} instructions`);
+    }
+
     fs.writeFileSync(path.join(args.out, "structure.json"), JSON.stringify({
         source: args.url ?? args.input,
         layout: modern.name,
